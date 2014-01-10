@@ -1,3 +1,7 @@
+import Image
+import ImageDraw
+import ImageChops
+import sys
 from json import load
 from random import randint
 from shapely.geometry import Polygon
@@ -5,12 +9,8 @@ from shapely.geometry import Point
 from shapely.geometry import box
 from shapely.affinity import rotate
 from shapely.affinity import translate
-import Image
-import ImageDraw
-import sys
 from os import listdir
 from os.path import isfile, join, splitext, basename
-
 
 '''USAGE: python PolyToRandPatch input_dir output_dir number_of_samples'''
 
@@ -21,15 +21,21 @@ def rounded_bbox(polygon):
 	bbox = map(int, bbox)
 	return bbox
 
-def polygon2image(polygon, output_size):
+def polygon2image(polygon, output_size, mode='1'):
 	'''Convert a vector polygon into a raster image'''
-	copy = Image.new('1', output_size, 'black')	#Blank canvas
+	copy = Image.new(mode, output_size, 'black')	#Blank canvas
 	draw = ImageDraw.Draw(copy)					#Draw the blank canvas
 	x, y = polygon.exterior.xy					#Get all the vertex coordinates
 	x = map(int, x)								
 	y = map(int, y)								
 	draw.polygon(zip(x, y), fill='white')		#Draw the polygon
 	return copy
+	
+def subtract_polygon_from_image(polygon, image):
+	'''Sets all pixels inside the polygon to 0'''
+	polygon = polygon2image(polygon, image.size, 'RGB')
+	image = ImageChops.subtract(image, polygon)
+	return image
 
 def total_golgi_area(json):
 	'''Get the total area of all of the Golgi annotations'''
@@ -92,16 +98,20 @@ total_area = total_golgi_area(files)
 for file in files:
 	#open up the electron micrograph image
 	image = Image.open(file['imagePath'])
+	neg_image = image.copy()	#Store a copy to put everything BUT Golgi
 	polygons = file['shapes']
 
 	for polygon in polygons:
 		#Check the polygon is labelled as a golgi
 		if polygon['label'] != 'golgi':
 			continue
+		i += 1
 		
 		#Make the list of points into a Shapely Polygon object
 		polygon = Polygon(polygon['points'])
-		i += 1
+		
+		#Remove the golgi from the negative examples
+		neg_image = subtract_polygon_from_image(polygon, image)
 		
 		#Crop to the region of interest for efficiency
 		bbox = rounded_bbox(polygon)
@@ -145,8 +155,14 @@ for file in files:
 					filename, ext = splitext(file['imagePath'])
 					filename = basename(filename)
 					filename = '%s_%s_%s' % (filename, i, j)
-					filename = join(output_dir, filename)
+					output_path = join(output_dir, filename)
 					
 					#Output
-					output_patch(golgi_crop, rotation, candidate_patch_coords, filename)
+					output_patch(golgi_crop, rotation, candidate_patch_coords, output_path)
+	
+	#Output the negative images with all the Golgis removed
+	neg_image_path = join(output_dir, "neg", filename + ".jpg")
+	neg_image.save(neg_image_path, format='JPEG', quality=100)
+		
+		
 					
