@@ -155,7 +155,7 @@ for file in files:
 					filename, ext = splitext(file['imagePath'])
 					filename = basename(filename)
 					filename = '%s_%s_%s' % (filename, i, j)
-					output_path = join(output_dir, filename)
+					output_path = join(output_dir, 'pos', filename)
 					
 					#Output
 					output_patch(golgi_crop, rotation, candidate_patch_coords, output_path)
@@ -164,5 +164,3 @@ for file in files:
 	neg_image_path = join(output_dir, "neg", filename + ".jpg")
 	neg_image.save(neg_image_path, format='JPEG', quality=100)
 		
-		
-					
