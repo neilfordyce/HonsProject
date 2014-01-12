@@ -130,8 +130,15 @@ for file in files:
 		#Loop for each sample required
 		for j in range(samples_count):			
 			#loop until a patch fully inside the polygon is found
-			output = False;
+			output = False
+			attempts = 0
 			while(not output):
+				
+				#Stop attempting to get a sample if the Golgi is too small
+				attempts += 1
+				if attempts > 1000:
+					break
+				
 				#apply random rotation
 				rotation = randint(0, 359)
 				mask = polygon.copy()
