@@ -134,16 +134,16 @@ for file in files:
 	polygons = file['shapes']
 
 	for polygon in polygons:
-		#Check the polygon is labelled as a golgi
-		if polygon['label'] != 'golgi':
-			continue
-		i += 1
-		
 		#Make the list of points into a Shapely Polygon object
 		polygon = Polygon(polygon['points'])
 		
 		#Remove the golgi from the negative examples
-		neg_image = subtract_polygon_from_image(polygon, image)
+		neg_image = subtract_polygon_from_image(polygon, neg_image)
+		
+		#Check the polygon is labelled as a golgi
+		if polygon['label'] != 'golgi':
+			continue
+		i += 1
 		
 		#Crop to the region of interest for efficiency
 		bbox = rounded_bbox(polygon)
