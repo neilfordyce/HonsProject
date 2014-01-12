@@ -4,15 +4,37 @@ import ImageChops
 import sys
 from json import load
 from random import randint
+from random import sample
 from shapely.geometry import Polygon
 from shapely.geometry import Point
 from shapely.geometry import box
 from shapely.affinity import rotate
 from shapely.affinity import translate
-from os import listdir
+from os import listdir, rename
 from os.path import isfile, join, splitext, basename
 
-'''USAGE: python PolyToRandPatch input_dir output_dir number_of_samples'''
+'''USAGE: python PolyToRandPatch input_dir output_dir number_of_samples percent_test'''
+
+def random_reserve_for_test(filenames, percent, output_dir):
+	'''Set aside a portion of the dataset for test.  
+	Save the label file in a different directory and remove from the list'''
+	print "testing"
+	#Pick a random sample population
+	sample_size = len(filenames) * (percent * 0.01)
+	sample_size = round(sample_size)
+	sample_size = int(sample_size)
+	test_filenames = sample(filenames, sample_size)
+	
+	#move the annotation files to the test output directory
+	for filename in test_filenames:
+		output_filename = basename(filename)	#Remove the path, leave the name
+		print "Reserving %s for testing" % output_filename
+		output_filename  = join(output_dir, 'test', output_filename)
+		rename(filename, output_filename)
+	
+	#remove the reserved sample from the file names
+	filenames = [file for file in filenames if file not in test_filenames]
+	return filenames
 
 def rounded_bbox(polygon):
 	'''Round the bbox to ints'''
@@ -77,13 +99,23 @@ def output_patch(image, rotation, crop_box, output_path):
 PATCH_SIZE = 200
 i = 0
 
-input_dir = sys.argv[1]
-output_dir = sys.argv[2]
-number_of_samples = int(sys.argv[3])
+try:
+	'''Get command line args'''
+	input_dir = sys.argv[1]
+	output_dir = sys.argv[2]
+	number_of_samples = int(sys.argv[3])
+	percent_test = int(sys.argv[4])
+except:
+	print "USAGE: python PolyToRandPatch input_dir output_dir number_of_samples percent_test"
+	exit()
+
 
 #Get all the files in dir
 annotation_files = [ file for file in listdir(input_dir) if isfile(join(input_dir, file)) ]
 annotation_files = map(lambda x: input_dir + x, annotation_files)  #Add the directory to the path
+
+#Reserve portion of the data for testing by removing it and moving the files to output_dir
+annotation_files = random_reserve_for_test(annotation_files, percent_test, output_dir)
 
 files = []
 
@@ -122,6 +154,7 @@ for file in files:
 		
 		#Calculate the samples required from this example Golgi
 		samples_count = samples_required(number_of_samples, polygon.area, total_area)
+		print "Taking %s from %s " % (samples_count, file['imagePath'])
 		
 		#Rasterise the polygon, so we can rotate it using 
 		#the same function used to rotate the output image
