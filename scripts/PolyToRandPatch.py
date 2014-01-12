@@ -18,7 +18,6 @@ from os.path import isfile, join, splitext, basename
 def random_reserve_for_test(filenames, percent, output_dir):
 	'''Set aside a portion of the dataset for test.  
 	Save the label file in a different directory and remove from the list'''
-	print "testing"
 	#Pick a random sample population
 	sample_size = len(filenames) * (percent * 0.01)
 	sample_size = round(sample_size)
@@ -134,6 +133,8 @@ for file in files:
 	polygons = file['shapes']
 
 	for polygon in polygons:
+		polygon_label = polygon['label']
+	
 		#Make the list of points into a Shapely Polygon object
 		polygon = Polygon(polygon['points'])
 		
@@ -141,7 +142,7 @@ for file in files:
 		neg_image = subtract_polygon_from_image(polygon, neg_image)
 		
 		#Check the polygon is labelled as a golgi
-		if polygon['label'] != 'golgi':
+		if  polygon_label != 'golgi':
 			continue
 		i += 1
 		
@@ -169,7 +170,8 @@ for file in files:
 				
 				#Stop attempting to get a sample if the Golgi is too small
 				attempts += 1
-				if attempts > 1000:
+				if attempts > 3000:
+					print "Skipping %s: cannot find a valid sample" % file['imagePath']
 					break
 				
 				#apply random rotation
