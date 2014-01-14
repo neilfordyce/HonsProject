@@ -94,6 +94,25 @@ def output_patch(image, rotation, crop_box, output_path):
 		filename = "%s_%s.jpg" % (output_path, rotation)
 		print filename
 		output_image.save(filename, format='JPEG', quality=100)
+		
+def directory_paths(input_dir):
+	'''Returns the absolute path to all the files in a directory'''
+	#Get all the files in dir
+	files = [ file for file in listdir(input_dir) if isfile(join(input_dir, file)) ]
+	files = map(lambda x: input_dir + x, files)  #Add the directory to the path
+	return files
+	
+def batch_open_deserialise(file_list):
+	files = []
+
+	#read in all the files
+	for file in file_list:
+		file = open(file, 'r')
+		file = load(file)	#Deserialise the JSON
+		files.append(file)
+		
+	return files
+
 
 PATCH_SIZE = 200
 i = 0
@@ -108,22 +127,16 @@ except:
 	print "USAGE: python PolyToRandPatch input_dir output_dir number_of_samples percent_test"
 	exit()
 
-
-#Get all the files in dir
-annotation_files = [ file for file in listdir(input_dir) if isfile(join(input_dir, file)) ]
-annotation_files = map(lambda x: input_dir + x, annotation_files)  #Add the directory to the path
+#Get the file paths to read from
+annotation_files = directory_paths(input_dir)
 
 #Reserve portion of the data for testing by removing it and moving the files to output_dir
 annotation_files = random_reserve_for_test(annotation_files, percent_test, output_dir)
 
-files = []
+#Open all the files and read the JSON
+files = batch_open_deserialise(annotation_files)
 
-#read in all the lif annotation files
-for file in annotation_files:
-	file = open(file, 'r')
-	file = load(file)	#Deserialise the JSON
-	files.append(file)
-	
+#Find the total area of all golgi
 total_area = total_golgi_area(files)
 
 for file in files:
