@@ -13,7 +13,7 @@ from shapely.affinity import translate
 from os import listdir, rename
 from os.path import isfile, join, splitext, basename
 
-'''USAGE: python PolyToRandPatch input_dir output_dir number_of_samples percent_test'''
+'''USAGE: python RandPatchSample input_dir output_dir number_of_samples percent_test'''
 
 def random_reserve_for_test(filenames, percent, output_dir):
 	'''Set aside a portion of the dataset for test.  
@@ -124,7 +124,7 @@ try:
 	number_of_samples = int(sys.argv[3])
 	percent_test = int(sys.argv[4])
 except:
-	print "USAGE: python PolyToRandPatch input_dir output_dir number_of_samples percent_test"
+	print "USAGE: python RandPatchSample input_dir output_dir number_of_samples percent_test"
 	exit()
 
 #Get the file paths to read from
