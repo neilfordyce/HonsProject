@@ -18,11 +18,15 @@ except:
 	print "Error reading cascade xml"
 	exit()
 
-#Get the file paths to read from
-detector_output_files = directory_paths(test_annotation_dir)
+try:
+	#Get the file paths to read from
+	detector_output_files = directory_paths(test_annotation_dir)
 
-#Open all the files and read the JSON
-annotation_files = batch_open_deserialise([detector_output_files])
+	#Open all the files and read the JSON
+	annotation_files = batch_open_deserialise([detector_output_files])
+except:
+	print "Error reading annotation files"
+	exit()
 
 #For each of the hand marked test files
 for annotation_file in annotation_files:
