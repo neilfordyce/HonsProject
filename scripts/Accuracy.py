@@ -29,22 +29,19 @@ except:
 	exit()
 
 #For each of the hand marked test files
-for annotation_file in annotation_files:
-	fp = 0
-	tp = 0
-	
+for annotation_file in annotation_files:	
 	#Read the image corresponding to the annotation
 	img = imread(annotation_file['imagePath'])
 	classifier_output = cascade.detectMultiScale(img)	#Run the detector
+	
+	total_detections = len(classifier_output)
+	fp = 0
+	tp = 0
 	
 	#Open all the files and read the JSON
 	golgi_polygons = annotation_file['shapes']
 
 	for golgi_polygon in golgi_polygons:
-		#Check the polygon is labelled as a golgi
-		if  golgi_polygon['label'] != 'golgi':
-			continue
-	
 		#Make the list of points into a Shapely Polygon object
 		golgi_polygon = Polygon(polygon['points'])
 		
@@ -54,9 +51,12 @@ for annotation_file in annotation_files:
 			
 			#Test if the detected rectangle is contained in the golgi region
 			if golgi_polygon.contains(detected_rect):
-				tp += 1
-				
-	total_detections = len(classifier_output)
+				#Check the polygon is labelled as a golgi
+				if  golgi_polygon['label'] == 'golgi':
+					tp += 1	
+				else:
+					total_detections -= 1	#Ignore detections in ambiguous regions						
+	
 	fp = total_detections - tp
 	
 	print "TP: %s" % tp	
