@@ -113,109 +113,110 @@ def batch_open_deserialise(file_list):
 		
 	return files
 
+if __name__ == '__main__':
 
-PATCH_SIZE = 200
-i = 0
+	PATCH_SIZE = 200
+	i = 0
 
-try:
-	'''Get command line args'''
-	input_dir = sys.argv[1]
-	output_dir = sys.argv[2]
-	number_of_samples = int(sys.argv[3])
-	percent_test = int(sys.argv[4])
-except:
-	print "USAGE: python RandPatchSample input_dir output_dir number_of_samples percent_test"
-	exit()
+	try:
+		'''Get command line args'''
+		input_dir = sys.argv[1]
+		output_dir = sys.argv[2]
+		number_of_samples = int(sys.argv[3])
+		percent_test = int(sys.argv[4])
+	except:
+		print "USAGE: python RandPatchSample input_dir output_dir number_of_samples percent_test"
+		exit()
 
-#Get the file paths to read from
-annotation_files = directory_paths(input_dir)
+	#Get the file paths to read from
+	annotation_files = directory_paths(input_dir)
 
-#Reserve portion of the data for testing by removing it and moving the files to output_dir
-annotation_files = random_reserve_for_test(annotation_files, percent_test, output_dir)
+	#Reserve portion of the data for testing by removing it and moving the files to output_dir
+	annotation_files = random_reserve_for_test(annotation_files, percent_test, output_dir)
 
-#Open all the files and read the JSON
-files = batch_open_deserialise(annotation_files)
+	#Open all the files and read the JSON
+	files = batch_open_deserialise(annotation_files)
 
-#Find the total area of all golgi
-total_area = total_golgi_area(files)
+	#Find the total area of all golgi
+	total_area = total_golgi_area(files)
 
-for file in files:
-	#open up the electron micrograph image
-	image = Image.open(file['imagePath'])
-	neg_image = image.copy()	#Store a copy to put everything BUT Golgi
-	polygons = file['shapes']
+	for file in files:
+		#open up the electron micrograph image
+		image = Image.open(file['imagePath'])
+		neg_image = image.copy()	#Store a copy to put everything BUT Golgi
+		polygons = file['shapes']
 
-	for polygon in polygons:
-		polygon_label = polygon['label']
-	
-		#Make the list of points into a Shapely Polygon object
-		polygon = Polygon(polygon['points'])
+		for polygon in polygons:
+			polygon_label = polygon['label']
 		
-		#Remove the golgi from the negative examples
-		neg_image = subtract_polygon_from_image(polygon, neg_image)
-		
-		#Check the polygon is labelled as a golgi
-		if  polygon_label != 'golgi':
-			continue
-		i += 1
-		
-		#Crop to the region of interest for efficiency
-		bbox = rounded_bbox(polygon)
-		golgi_crop = image.crop(bbox)
-		
-		#Shift the polygon to be over the golgi in golgi_crop image
-		polygon = translate(polygon, xoff=-bbox[0], yoff=-bbox[1])
-		
-		#Calculate the samples required from this example Golgi
-		samples_count = samples_required(number_of_samples, polygon.area, total_area)
-		print "Taking %s from %s " % (samples_count, file['imagePath'])
-		
-		#Rasterise the polygon, so we can rotate it using 
-		#the same function used to rotate the output image
-		polygon = polygon2image(polygon, golgi_crop.size)		
-		
-		#Loop for each sample required
-		for j in range(samples_count):			
-			#loop until a patch fully inside the polygon is found
-			output = False
-			attempts = 0
-			while(not output):
-				
-				#Stop attempting to get a sample if the Golgi is too small
-				attempts += 1
-				if attempts > 3000:
-					print "Skipping %s: cannot find a valid sample" % file['imagePath']
-					break
-				
-				#apply random rotation
-				rotation = randint(0, 359)
-				mask = polygon.copy()
-				mask = mask.rotate(rotation, resample=Image.BICUBIC, expand=True)
+			#Make the list of points into a Shapely Polygon object
+			polygon = Polygon(polygon['points'])
+			
+			#Remove the golgi from the negative examples
+			neg_image = subtract_polygon_from_image(polygon, neg_image)
+			
+			#Check the polygon is labelled as a golgi
+			if  polygon_label != 'golgi':
+				continue
+			i += 1
+			
+			#Crop to the region of interest for efficiency
+			bbox = rounded_bbox(polygon)
+			golgi_crop = image.crop(bbox)
+			
+			#Shift the polygon to be over the golgi in golgi_crop image
+			polygon = translate(polygon, xoff=-bbox[0], yoff=-bbox[1])
+			
+			#Calculate the samples required from this example Golgi
+			samples_count = samples_required(number_of_samples, polygon.area, total_area)
+			print "Taking %s from %s " % (samples_count, file['imagePath'])
+			
+			#Rasterise the polygon, so we can rotate it using 
+			#the same function used to rotate the output image
+			polygon = polygon2image(polygon, golgi_crop.size)		
+			
+			#Loop for each sample required
+			for j in range(samples_count):			
+				#loop until a patch fully inside the polygon is found
+				output = False
+				attempts = 0
+				while(not output):
 					
-				#pick a random box in the image
-				x = randint(0, mask.size[0] - PATCH_SIZE)
-				y = randint(0, mask.size[1] - PATCH_SIZE)
-				candidate_patch_coords = (x, y, x + PATCH_SIZE, y + PATCH_SIZE)
-				candidate_patch = box(*candidate_patch_coords)
+					#Stop attempting to get a sample if the Golgi is too small
+					attempts += 1
+					if attempts > 3000:
+						print "Skipping %s: cannot find a valid sample" % file['imagePath']
+						break
+					
+					#apply random rotation
+					rotation = randint(0, 359)
+					mask = polygon.copy()
+					mask = mask.rotate(rotation, resample=Image.BICUBIC, expand=True)
+						
+					#pick a random box in the image
+					x = randint(0, mask.size[0] - PATCH_SIZE)
+					y = randint(0, mask.size[1] - PATCH_SIZE)
+					candidate_patch_coords = (x, y, x + PATCH_SIZE, y + PATCH_SIZE)
+					candidate_patch = box(*candidate_patch_coords)
 
-				#and then cut it out
-				crop_mask = mask.crop(candidate_patch_coords)
-				
-				#then test if the patch contains entirely golgi
-				if crop_mask.histogram()[-1] == PATCH_SIZE**2:
-					#if yes - output the patch
-					output = True
+					#and then cut it out
+					crop_mask = mask.crop(candidate_patch_coords)
 					
-					#Construct the file name
-					filename, ext = splitext(file['imagePath'])
-					filename = basename(filename)
-					filename = '%s_%s_%s' % (filename, i, j)
-					output_path = join(output_dir, 'pos', filename)
-					
-					#Output
-					output_patch(golgi_crop, rotation, candidate_patch_coords, output_path)
-	
-	#Output the negative images with all the Golgis removed
-	neg_image_path = join(output_dir, "neg", filename + ".jpg")
-	neg_image.save(neg_image_path, format='JPEG', quality=100)
+					#then test if the patch contains entirely golgi
+					if crop_mask.histogram()[-1] == PATCH_SIZE**2:
+						#if yes - output the patch
+						output = True
+						
+						#Construct the file name
+						filename, ext = splitext(file['imagePath'])
+						filename = basename(filename)
+						filename = '%s_%s_%s' % (filename, i, j)
+						output_path = join(output_dir, 'pos', filename)
+						
+						#Output
+						output_patch(golgi_crop, rotation, candidate_patch_coords, output_path)
 		
+		#Output the negative images with all the Golgis removed
+		neg_image_path = join(output_dir, "neg", filename + ".jpg")
+		neg_image.save(neg_image_path, format='JPEG', quality=100)
+			
