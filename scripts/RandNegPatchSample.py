@@ -12,49 +12,9 @@ from shapely.affinity import rotate
 from shapely.affinity import translate
 from os import listdir, rename
 from os.path import isfile, join, splitext, basename
+from RandPatchSample import directory_paths, output_patch
 
 '''USAGE: python RandPatchSample input_dir output_dir number_of_samples percent_test'''
-
-def random_reserve_for_test(filenames, percent, output_dir):
-	'''Set aside a portion of the dataset for test.  
-	Save the label file in a different directory and remove from the list'''
-	#Pick a random sample population
-	sample_size = len(filenames) * (percent * 0.01)
-	sample_size = round(sample_size)
-	sample_size = int(sample_size)
-	test_filenames = sample(filenames, sample_size)
-	
-	#move the annotation files to the test output directory
-	for filename in test_filenames:
-		output_filename = basename(filename)	#Remove the path, leave the name
-		print "Reserving %s for testing" % output_filename
-		output_filename  = join(output_dir, 'test', output_filename)
-		rename(filename, output_filename)
-	
-	#remove the reserved sample from the file names
-	filenames = [file for file in filenames if file not in test_filenames]
-	return filenames
-	
-def output_patch(image, rotation, crop_box, output_path):
-	'''Perform cropping and rotation to get the output image, then save it.  
-	Also bump up samples *4 by rotating around right angles and saving them too.'''
-	image = image.rotate(rotation, resample=Image.BICUBIC, expand=True)
-	image = image.crop(crop_box)
-	
-	#Store an image at each rotation
-	for rotation in [0]:
-		output_image = image.copy()
-		output_image = output_image.rotate(rotation, expand=False)
-		filename = "%s_%s.jpg" % (output_path, rotation)
-		print filename
-		output_image.save(filename, format='JPEG', quality=100)
-		
-def directory_paths(input_dir):
-	'''Returns the absolute path to all the files in a directory'''
-	#Get all the files in dir
-	files = [ file for file in listdir(input_dir) if isfile(join(input_dir, file)) ]
-	files = map(lambda x: input_dir + x, files)  #Add the directory to the path
-	return files
 
 PATCH_SIZE = 200
 i = 0
@@ -92,6 +52,6 @@ for file in files:
 		output_path = join(output_dir, filename)
 		
 		#Output
-		output_patch(image, 0, candidate_patch_coords, output_path)
+		output_patch(image, 0, candidate_patch_coords, output_path, output_rotations=[0])
 	
 		

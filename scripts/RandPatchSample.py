@@ -81,14 +81,14 @@ def samples_required(total_samples, golgi_area, total_golgi_area):
 	samples = round(samples)
 	return int(samples)
 	
-def output_patch(image, rotation, crop_box, output_path):
+def output_patch(image, rotation, crop_box, output_path, output_rotations=[0, 90, 180, 270]):
 	'''Perform cropping and rotation to get the output image, then save it.  
 	Also bump up samples *4 by rotating around right angles and saving them too.'''
 	image = image.rotate(rotation, resample=Image.BICUBIC, expand=True)
 	image = image.crop(crop_box)
 	
 	#Store an image at each rotation
-	for rotation in [0, 90, 180, 270]:
+	for rotation in output_rotations:
 		output_image = image.copy()
 		output_image = output_image.rotate(rotation, expand=False)
 		filename = "%s_%s.jpg" % (output_path, rotation)
