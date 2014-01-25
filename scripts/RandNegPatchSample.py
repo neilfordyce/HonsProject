@@ -14,7 +14,7 @@ from os import listdir, rename
 from os.path import isfile, join, splitext, basename
 from RandPatchSample import directory_paths, output_patch
 
-'''USAGE: python RandPatchSample input_dir output_dir number_of_samples percent_test'''
+'''USAGE: python RandNegPatchSample input_dir output_dir number_of_samples'''
 
 PATCH_SIZE = 200
 i = 0

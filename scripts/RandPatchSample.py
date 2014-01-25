@@ -42,14 +42,14 @@ def rounded_bbox(polygon):
 	bbox = map(int, bbox)
 	return bbox
 
-def polygon2image(polygon, output_size, mode='1'):
+def polygon2image(polygon, output_size, mode='1', polygon_fill='white'):
 	'''Convert a vector polygon into a raster image'''
-	copy = Image.new(mode, output_size, 'black')	#Blank canvas
+	copy = Image.new(mode, output_size, 'black')		#Blank canvas
 	draw = ImageDraw.Draw(copy)					#Draw the blank canvas
 	x, y = polygon.exterior.xy					#Get all the vertex coordinates
 	x = map(int, x)								
 	y = map(int, y)								
-	draw.polygon(zip(x, y), fill='white')		#Draw the polygon
+	draw.polygon(zip(x, y), fill=polygon_fill)		#Draw the polygon
 	return copy
 	
 def subtract_polygon_from_image(polygon, image):
