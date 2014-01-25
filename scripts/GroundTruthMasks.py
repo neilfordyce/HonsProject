@@ -49,9 +49,15 @@ for file in files:
 	
 	#Blend all of the polygon images together
 	output_image = polygon_images[0]
-	
+
 	for polygon_image in polygon_images[1:]:
-		output_image = Image.composite(output_image, polygon_image, output_image.convert('1'))
+		#Create a mask so we only change the part of the image being added
+		mtx = (1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0)
+		mask = polygon_image.convert("L", mtx)
+
+		output_image = Image.composite(polygon_image,
+										output_image, 
+										mask)			
 
 	#Construct the file name
 	filename, ext = splitext(file['imagePath'])
