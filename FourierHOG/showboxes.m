@@ -1,10 +1,10 @@
-function showboxes(im, boxes, out)
+function showboxes(im, boxes, det_count, out)
 
 % showboxes(im, boxes, out)
 % Draw bounding boxes on top of image.
 % If out is given, a pdf of the image is generated (requires export_fig).
 
-if nargin > 2
+if nargin > 3
   % different settings for producing pdfs
   print = true;
 wwidth = 5;
@@ -23,7 +23,7 @@ else
 end
 hh=figure(99);
 % clf;
-imagesc((im)); 
+imshow((im)); 
 colormap gray;
 truesize;
 axis equal;
@@ -55,7 +55,7 @@ if ~isempty(boxes)
     end
   end
   % draw the boxes with the detection window on top (reverse order)
-  for i = 1
+  for i = 1:det_count
     x1 = boxes(:,1+(i-1)*4);
     y1 = boxes(:,2+(i-1)*4);
     x2 = boxes(:,3+(i-1)*4);

@@ -57,7 +57,7 @@ for file in files:
 
 		output_image = Image.composite(polygon_image,
 										output_image, 
-										mask)			
+										mask)	
 
 	#Construct the file name
 	filename, ext = splitext(file['imagePath'])

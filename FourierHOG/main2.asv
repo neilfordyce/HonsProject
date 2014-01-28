@@ -27,7 +27,6 @@ addpath(genpath('/home/liu/Dropbox/doc/IJCV/code/FourierHOG/TAS'));
 
 %% load data and TAS setting
 %run('TAS/example/Params/search.m'); 
-search  %training tas_params
 data = load_data('C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images', 1:10);
 rands = randperm(length(data.image_filename));
 

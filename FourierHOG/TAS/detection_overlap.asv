@@ -1,0 +1,17 @@
+%Rewrite of TAS detection_overlap.m to support own labeling framework, for
+%non-rigid objects.  Orignal TAS detection overlap compared bounding boxes,
+%which are not be suitable for Golgi groundtruths.
+function ov = detection_overlap(bb, mask_filename)
+    mask = imread(data.gt_filename{m});
+    mask = imresize(mask{m}, scale);
+    mask = rgb2gray(mask{m});
+    mask(mask{m} > 0 & mask{m} < 255) = 1;  % all gray areas to 1
+    mask(mask{m} == 255) = 2;  % all white areas to 2  
+
+    %Crop the mask to the bounding box
+    bb_crop = mask(bb(1):bb(3), bb(2):bb(4));
+    total_pixels = numel(bb_crop);
+    golgi_pixels = numel(bb_crop(bbcrop == 2));
+    ov = golgi_pixels / total_pixels;
+end
+  
