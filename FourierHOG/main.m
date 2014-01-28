@@ -5,9 +5,13 @@ clearvars
 close all
 dbstop if error
 
+
+
 % parameters
 param.featureScale = 6;
-param.NMS_OV  = 0.5;
+param.NMS_OV  = 0.5;  %non-max. suppression
+param.bbRadius = 40;
+param.indifferenceRadius = param.bbRadius;
 
 initrand();
 
@@ -22,9 +26,10 @@ addpath(genpath('/home/liu/Matlab/liblinear-1.8'));
 addpath(genpath('/home/liu/Dropbox/doc/IJCV/code/FourierHOG/TAS'));
 
 %% load data and TAS setting
-run('TAS/example/Params/search.m'); 
-data = load_tas_data_simplified('cars', 'TAS/example/Data', tas_params, 1:1);
-rands= randperm(length(data.image_filename));
+%run('TAS/example/Params/search.m'); 
+search  %training tas_params
+data = load_data('C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images', 1:10);
+rands = randperm(length(data.image_filename));
 
 %%
 I = im2double(imread(data.image_filename{1}));
@@ -34,20 +39,12 @@ pause(0.5);
 
 %%
 Image = [];
-BB = [];
+scale = 0.2;
 for m = 1:length(data.image_filename)
-    data.gt{m}
     Image{m} = im2double(imread(data.image_filename{m}));
-    GT{m} = round(0.5 * (data.gt{m}(:,3:4)+data.gt{m}(:,1:2)));    %center
-    GTBB{m} = data.gt{m}(:,1:4);    %bb
-    BB = [BB; GTBB{m}];
-    GT{m} 
+    Image{m} = imresize(Image{m}, tas_params.scale);
+    mask{m} = read_mask(data.gt_filename{m}, tas_params.scale);
 end
-param.bbRadius = round(mean(mean(BB(:,3:4) - BB(:,1:2))) / 2)       % from the average of bounding boxes
-param.indifferenceRadius  = param.bbRadius;
-
-param.bbRadius
-param.indifferenceRadius
 
 %% computing features
 N = numel(Image);
@@ -66,34 +63,36 @@ fprintf('Feature Dimension: %d \n' ,size(F{i},2) );
 data.dets = cell(1,N);
 data.score = cell(1,N);
 for ifold = 1:5
-    mask = false(1,N);
-    mask( (ifold - 1) * N/5 + (1:N/5) ) = true;
+    sample_mask = false(1,N);
+    sample_mask( (ifold - 1) * N/5 + (1:N/5) ) = true;
     
-    trainIndex = rands(~mask)
-    testIndex = rands(mask)
+    trainIndex = rands(~sample_mask)
+    testIndex = rands(sample_mask)
     
     % get training samples:  792 * 636 pixels per image
     Pos = [];
     Neg = [];
     % get mask and data
     for i = trainIndex
-        mask = zeros(size(Image{i},1), size(Image{i},2));
-        for j = 1:size(GT{i}, 1)
-            GT{i}(j,2)
-            GT{i}(j,1)
-            mask(GT{i}(j,2), GT{i}(j,1)) = 1;
-        end
         % indifferent positions
-        se = strel('disk',  param.indifferenceRadius   ,0);
-        dmask = imdilate(mask, se);
+        se = strel('disk',  param.indifferenceRadius, 0);
+        dmask = imdilate(mask{i}, se);
         % add positive samples around the centers
         se = [1 1 1;1 1 1;1 1 1];
-        mask = imdilate(mask, se);
+        mask{i} = imdilate(mask{i}, se);
         
-        mask( xor(dmask, mask) ) = 0.5;
+        mask{i}( xor(dmask, mask{i}) ) = 0.5;
         %% downsampling
-        Pos{i} = F{i}(mask(:) == 1, :);
-        index1 = find(mask(:) == 0);
+        %number of pos samples is defined by the number available to take
+        total_pixels = numel(mask{i}(:));
+        pos_pixels = numel(mask{i}(mask{i}==2));
+        pos_sample_count = (pos_pixels / total_pixels) * 10000
+        
+        index1 = find(mask{i}(:) == 2);
+        index2 = randsample(numel(index1), pos_sample_count);   % draw positive samples from image
+        Pos{i} = F{i}(index1(index2), :);
+        
+        index1 = find(mask{i}(:) == 0);
         index2 = randsample(numel(index1), 3000);   % draw 3000 negative samples per image
         Neg{i} = F{i}(index1(index2), :);
     end
@@ -119,20 +118,16 @@ for ifold = 1:5
         if(~ ismember(i,trainIndex))
             continue;
         end
-        mask = zeros(size(Image{i},1), size(Image{i},2));
-        for j = 1:size(GT{i}, 1)
-            mask(GT{i}(j,2), GT{i}(j,1)) = 1;
-        end
         se = strel('disk',  param.indifferenceRadius   ,0);
-        dmask = imdilate(mask, se);
+        dmask = imdilate(mask{i}, se);
         se = [1 1 1;1 1 1;1 1 1];
-        mask = imdilate(mask, se);
-        mask( xor(dmask, mask) ) = 0.5;
+        mask{i} = imdilate(mask{i}, se);
+        mask{i}( xor(dmask, mask{i}) ) = 0.5;
         %% detection
         votes =  F{i} * model.w(1:end-1)' + model.w(end);
-        Y_hat = reshape(votes, [636, 792]);
+        Y_hat = reshape(votes, [size(Image{1}, 1), size(Image{1}, 2)]);
         %% sample negative samples based on the distances to the hyperplane
-        Y_hat = max(Y_hat + 1, 0) .* (mask == 0);
+        Y_hat = max(Y_hat + 1, 0) .* (mask{i} == 0);
         index = unique(randsample(numel(Y_hat), 3000, true, Y_hat(:)));
         HardNeg{i} = F{i}(index, :);
     end
@@ -156,7 +151,7 @@ for ifold = 1:5
             continue;
         end
         votes = F{i} * model.w(1:end-1)' + model.w(end);
-        Y_hat = reshape(votes, [636, 792]);
+        Y_hat = reshape(votes, [size(Image{1}, 1), size(Image{1}, 2)]);
         %         figure(98);clf;
         %         imagesc(Y_hat); axis equal tight off;
         %         export_fig([data.image_filename{i}(1:end-4) '_det.png']);pause(0.5);
