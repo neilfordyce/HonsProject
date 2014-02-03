@@ -70,6 +70,7 @@ end
 
 % compute convolutions
 fHoG = zeros([om,on,featureDim*nScale]);
+%fHoG = [];
 cnt = 0;
 for s = 1:nScale
     for freq = -maxFreq:maxFreq
@@ -81,6 +82,10 @@ for s = 1:nScale
             ff = -(order(j))+freq;
             if(ff >= -maxFreqSum && ff <= maxFreqSum && ~(order(j)==0 && freq < 0))
                 cnt = cnt + 1;
+                %field = unPad(conv2(f_g(:,:,j), template, 'valid'), [om,on]);
+                %fHoG = cat(3, fHoG, field);
+                %Could scale fHoG, center_f_g, local_mag_g, om, on, here to 
+                %sub sample the features
                 fHoG(:,:,cnt) = unPad(conv2(f_g(:,:,j), template, 'valid'), [om,on]);
             end
         end
@@ -143,10 +148,6 @@ for i = 1:size(cF,2)
 end
 cF = [real(cF), imag(cF(:,~ifreal))];
 cFdetail =[cFdetail; cFdetail(~ifreal,:)];
-
-size(iF)
-size(mF)
-size(cF)
 
 %% final output
 Feature = [iF mF cF];

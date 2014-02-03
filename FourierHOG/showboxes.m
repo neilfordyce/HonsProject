@@ -7,16 +7,7 @@ function showboxes(im, boxes, det_count, out)
 if nargin > 3
   % different settings for producing pdfs
   print = true;
-wwidth = 5;
-  cwidth = 4;
-%   imsz = size(im);
-%   % resize so that the image is 300 pixels per inch
-%   % and 1.2 inches tall
-%   scale = 1.2 / (imsz(1)/300);
-%   im = imresize(im, scale, 'method', 'cubic');
-%   %f = fspecial('gaussian', [3 3], 0.5);
-%   %im = imfilter(im, f);
-%   boxes(:,1:4) = (boxes(:,1:4)-1)*scale+1;
+  cwidth = 0.5;
 else
   print = false;
   cwidth = 0.5;
@@ -32,6 +23,7 @@ set(gcf, 'Color', 'white');
 
 if ~isempty(boxes)
   numfilters = floor(size(boxes, 2)/4);
+%{
   if print
     % if printing, increase the contrast around the boxes
     % by printing a white box under each color box
@@ -54,6 +46,7 @@ if ~isempty(boxes)
       line([x1 x1 x2 x2 x1]', [y1 y2 y2 y1 y1]', 'color', 'w', 'linewidth', wwidth);
     end
   end
+  %}
   % draw the boxes with the detection window on top (reverse order)
   for i = 1:det_count
     x1 = boxes(:,1+(i-1)*4);

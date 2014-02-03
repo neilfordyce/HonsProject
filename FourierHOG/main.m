@@ -5,13 +5,14 @@ clearvars
 close all
 dbstop if error
 
-
-
 % parameters
 param.featureScale = 6;
-param.NMS_OV  = 0.5;  %non-max. suppression
-param.bbRadius = 40;
+param.NMS_OV  = 0;  %non-max. suppression
+param.bbRadius = 30;
 param.indifferenceRadius = param.bbRadius;
+param.sample_count = 5;
+param.neg_sample_count = 3000;  %Per image
+param.pos_sample_multiplier = 10000;
 
 initrand();
 
@@ -26,22 +27,14 @@ addpath(genpath('/home/liu/Matlab/liblinear-1.8'));
 addpath(genpath('/home/liu/Dropbox/doc/IJCV/code/FourierHOG/TAS'));
 
 %% load data and TAS setting
-%run('TAS/example/Params/search.m'); 
 search  %training tas_params
-data = load_data('C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images', 1:10);
+data = load_data('C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images', 1:param.sample_count);
 rands = randperm(length(data.image_filename));
 
-%%
-I = im2double(imread(data.image_filename{1}));
-figure('Name', 'example image');
-imshow(I);shg;
-pause(0.5);
-
-%%
+%%Read images and ground truth masks
 Image = [];
-scale = 0.2;
 for m = 1:length(data.image_filename)
-    Image{m} = im2double(imread(data.image_filename{m}));
+    Image{m} = im2double(rgb2gray(imread(data.image_filename{m})));
     Image{m} = imresize(Image{m}, tas_params.scale);
     mask{m} = read_mask(data.gt_filename{m}, tas_params.scale);
 end
@@ -86,14 +79,14 @@ for ifold = 1:5
         %number of pos samples is defined by the number available to take
         total_pixels = numel(mask{i}(:));
         pos_pixels = numel(mask{i}(mask{i}==2));
-        pos_sample_count = (pos_pixels / total_pixels) * 10000
+        pos_sample_count = (pos_pixels / total_pixels) * param.pos_sample_multiplier
         
         index1 = find(mask{i}(:) == 2);
         index2 = randsample(numel(index1), pos_sample_count);   % draw positive samples from image
         Pos{i} = F{i}(index1(index2), :);
         
         index1 = find(mask{i}(:) == 0);
-        index2 = randsample(numel(index1), 3000);   % draw 3000 negative samples per image
+        index2 = randsample(numel(index1), param.neg_sample_count);   % draw 3000 negative samples per image
         Neg{i} = F{i}(index1(index2), :);
     end
     Pos1 = double(cell2mat(Pos(trainIndex)'));
@@ -165,8 +158,11 @@ for ifold = 1:5
             v = Y_hat(cc(2),cc(1));
             dt = [dt; [cc(1) - param.bbRadius , cc(2) - param.bbRadius , cc(1) + param.bbRadius , cc(2) + param.bbRadius , v]];
         end
-        pick = nms(dt,param.NMS_OV);
-        dt = dt(pick,:);
+        
+        fprintf('NMS\n');
+        % Turn off nms
+        %pick = nms(dt,param.NMS_OV);
+        %dt = dt(pick,:);
         I = Image{i};
         dt = clipboxes(I, dt);
         data.dets{i} = dt(:,1:4);
@@ -175,7 +171,8 @@ for ifold = 1:5
     % results are accumulated in the cross-validation process
 end
 %% using the evaluation tool from TAS package
-pr = det_rpc(data,data.score,tas_params.truth_threshold, 'r-'); pause(0.5);
-pr.ap
-figure('Name', 'PR'); plot(pr.recall, pr.precision, 'r-'); shg; pause(0.5)
+%pr = 
+det_rpc(data,tas_params); %pause(0.5);
+%pr.ap
+%figure('Name', 'PR'); plot(pr.recall, pr.precision, 'r-'); shg; pause(0.5)
 
