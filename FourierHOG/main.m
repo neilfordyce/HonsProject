@@ -31,6 +31,10 @@ search  %training tas_params
 data = load_data('C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images', 1:param.sample_count);
 rands = randperm(length(data.image_filename));
 
+%Make dir to output certainty images
+Y_hat_dir = fullfile('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs', ['FourierHOG_Prob', num2str(round(now*100000))]);
+mkdir(Y_hat_dir);
+
 %%Read images and ground truth masks
 Image = [];
 for m = 1:length(data.image_filename)
@@ -55,6 +59,7 @@ fprintf('Feature Dimension: %d \n' ,size(F{i},2) );
 
 data.dets = cell(1,N);
 data.score = cell(1,N);
+
 for ifold = 1:5
     sample_mask = false(1,N);
     sample_mask( (ifold - 1) * N/5 + (1:N/5) ) = true;
@@ -139,9 +144,6 @@ for ifold = 1:5
     %% detection
     fprintf('detection\n');
     tic
-    %Make dir to output certainty images
-    Y_hat_dir = fullfile('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs', ['FourierHOG_Prob', num2str(round(now*100000))]);
-    mkdir(Y_hat_dir);
     for i = 1:length(data.image_filename)
         if(~ ismember(i,testIndex))
             continue;
@@ -149,7 +151,8 @@ for ifold = 1:5
         votes = F{i} * model.w(1:end-1)' + model.w(end);
         Y_hat = reshape(votes, [size(Image{1}, 1), size(Image{1}, 2)]);
         
-        imwrite(Y_hat, fullfile(Y_hat_dir, [data.name{i} '.jpg'])); %Store the certainty image
+        scale_Y_hat = step(vision.ContrastAdjuster, Y_hat); %Contrast scale the certainties image
+        imwrite(scale_Y_hat, fullfile(Y_hat_dir, [data.name{i} '.jpg'])); %Store the certainty image
 
         %%
         bw = imregionalmax(Y_hat);
