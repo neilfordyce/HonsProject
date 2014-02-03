@@ -149,7 +149,7 @@ for ifold = 1:5
         votes = F{i} * model.w(1:end-1)' + model.w(end);
         Y_hat = reshape(votes, [size(Image{1}, 1), size(Image{1}, 2)]);
         
-        imwrite(Y_hat, fullfile(Y_hat_dir, data.name{i}, '.jpg')); %Store the certainty image
+        imwrite(Y_hat, fullfile(Y_hat_dir, [data.name{i} '.jpg'])); %Store the certainty image
 
         %%
         bw = imregionalmax(Y_hat);
