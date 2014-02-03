@@ -84,7 +84,7 @@ for ifold = 1:5
         %number of pos samples is defined by the number available to take
         total_pixels = numel(mask{i}(:));
         pos_pixels = numel(mask{i}(mask{i}==2));
-        pos_sample_count = (pos_pixels / total_pixels) * param.pos_sample_multiplier
+        pos_sample_count = round((pos_pixels / total_pixels) * param.pos_sample_multiplier)
         
         index1 = find(mask{i}(:) == 2);
         index2 = randsample(numel(index1), pos_sample_count);   % draw positive samples from image
