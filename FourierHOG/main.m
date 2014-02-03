@@ -139,16 +139,18 @@ for ifold = 1:5
     %% detection
     fprintf('detection\n');
     tic
+    %Make dir to output certainty images
+    Y_hat_dir = fullfile('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs', ['FourierHOG_Prob', num2str(round(now*100000))]);
+    mkdir(Y_hat_dir);
     for i = 1:length(data.image_filename)
         if(~ ismember(i,testIndex))
             continue;
         end
         votes = F{i} * model.w(1:end-1)' + model.w(end);
         Y_hat = reshape(votes, [size(Image{1}, 1), size(Image{1}, 2)]);
-        %         figure(98);clf;
-        %         imagesc(Y_hat); axis equal tight off;
-        %         export_fig([data.image_filename{i}(1:end-4) '_det.png']);pause(0.5);
-        %         save([data.image_filename{i}(1:end-4) '_det.mat'], 'Y_hat');
+        
+        imwrite(Y_hat, fullfile(Y_hat_dir, data.name{i}, '.jpg')); %Store the certainty image
+
         %%
         bw = imregionalmax(Y_hat);
         dt = [];
@@ -161,8 +163,8 @@ for ifold = 1:5
         
         fprintf('NMS\n');
         % Turn off nms
-        %pick = nms(dt,param.NMS_OV);
-        %dt = dt(pick,:);
+        pick = nms(dt,param.NMS_OV);
+        dt = dt(pick,:);
         I = Image{i};
         dt = clipboxes(I, dt);
         data.dets{i} = dt(:,1:4);
