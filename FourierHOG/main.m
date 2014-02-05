@@ -10,9 +10,9 @@ param.featureScale = 6;
 param.NMS_OV  = 0;  %non-max. suppression
 param.bbRadius = 30;
 param.indifferenceRadius = param.bbRadius;
-param.sample_count = 5;
+param.sample_count = 10;
 param.neg_sample_count = 3000;  %Per image
-param.pos_sample_multiplier = 10000;
+param.pos_sample_multiplier = 50000;
 
 initrand();
 
@@ -175,7 +175,7 @@ for ifold = 1:5
     end
     % results are accumulated in the cross-validation process
 end
-%% using the evaluation tool from TAS package
+%% evaluate 
 %pr = 
 det_rpc(data,tas_params); %pause(0.5);
 %pr.ap
