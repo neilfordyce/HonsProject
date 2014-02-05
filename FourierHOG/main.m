@@ -10,7 +10,7 @@ param.featureScale = 6;
 param.NMS_OV  = 0;  %non-max. suppression
 param.bbRadius = 30;
 param.indifferenceRadius = param.bbRadius;
-param.sample_count = 10;
+param.sample_count = 30;
 param.neg_sample_count = 3000;  %Per image
 param.pos_sample_multiplier = 50000;
 
@@ -35,6 +35,8 @@ rands = randperm(length(data.image_filename));
 Y_hat_dir = fullfile('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs', ['FourierHOG_Prob', num2str(round(now*100000))]);
 mkdir(Y_hat_dir);
 
+feature_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\output\features';
+
 %%Read images and ground truth masks
 Image = [];
 for m = 1:length(data.image_filename)
@@ -49,13 +51,18 @@ F = cell(1, N);
 prepareKernel(param.featureScale, 4, 0);
 pause(0.1);
 for i = 1:length(data.image_filename)
-    disp(['extracting features from image' num2str(i)]);
-    tic
-    F{i} = FourierHOG(Image{i},param.featureScale);
-    toc;
+    feature_file = fullfile(feature_dir, sprintf('F%d.mat', i));
+    %Create and compute a feature file if one doesn't already exist
+    if exist(feature_file) ~= 2
+        disp(['extracting features from image' num2str(i)]);
+        tic
+        F = FourierHOG(Image{i},param.featureScale);
+        save(feature_file, 'F');
+        toc;
+    end
 end
 
-fprintf('Feature Dimension: %d \n' ,size(F{i},2) );
+fprintf('Feature Dimension: %d \n' ,size(F,2) );
 
 data.dets = cell(1,N);
 data.score = cell(1,N);
@@ -72,6 +79,7 @@ for ifold = 1:5
     Neg = [];
     % get mask and data
     for i = trainIndex
+        F = read_feature(feature_dir, i);
         % indifferent positions
         se = strel('disk',  param.indifferenceRadius, 0);
         dmask = imdilate(mask{i}, se);
@@ -88,11 +96,11 @@ for ifold = 1:5
         
         index1 = find(mask{i}(:) == 2);
         index2 = randsample(numel(index1), pos_sample_count);   % draw positive samples from image
-        Pos{i} = F{i}(index1(index2), :);
+        Pos{i} = F(index1(index2), :);
         
         index1 = find(mask{i}(:) == 0);
         index2 = randsample(numel(index1), param.neg_sample_count);   % draw 3000 negative samples per image
-        Neg{i} = F{i}(index1(index2), :);
+        Neg{i} = F(index1(index2), :);
     end
     Pos1 = double(cell2mat(Pos(trainIndex)'));
     Neg1 = double(cell2mat(Neg(trainIndex)'));
@@ -116,18 +124,19 @@ for ifold = 1:5
         if(~ ismember(i,trainIndex))
             continue;
         end
+        F = read_feature(feature_dir, i);
         se = strel('disk',  param.indifferenceRadius   ,0);
         dmask = imdilate(mask{i}, se);
         se = [1 1 1;1 1 1;1 1 1];
         mask{i} = imdilate(mask{i}, se);
         mask{i}( xor(dmask, mask{i}) ) = 0.5;
         %% detection
-        votes =  F{i} * model.w(1:end-1)' + model.w(end);
+        votes =  F * model.w(1:end-1)' + model.w(end);
         Y_hat = reshape(votes, [size(Image{1}, 1), size(Image{1}, 2)]);
         %% sample negative samples based on the distances to the hyperplane
         Y_hat = max(Y_hat + 1, 0) .* (mask{i} == 0);
         index = unique(randsample(numel(Y_hat), 3000, true, Y_hat(:)));
-        HardNeg{i} = F{i}(index, :);
+        HardNeg{i} = F(index, :);
     end
     HardNegM = double(cell2mat(HardNeg(trainIndex)'));
     toc
@@ -148,7 +157,8 @@ for ifold = 1:5
         if(~ ismember(i,testIndex))
             continue;
         end
-        votes = F{i} * model.w(1:end-1)' + model.w(end);
+        F = read_feature(feature_dir, i);
+        votes = F * model.w(1:end-1)' + model.w(end);
         Y_hat = reshape(votes, [size(Image{1}, 1), size(Image{1}, 2)]);
         
         scale_Y_hat = step(vision.ContrastAdjuster, Y_hat); %Contrast scale the certainties image
@@ -180,4 +190,3 @@ end
 det_rpc(data,tas_params); %pause(0.5);
 %pr.ap
 %figure('Name', 'PR'); plot(pr.recall, pr.precision, 'r-'); shg; pause(0.5)
-
