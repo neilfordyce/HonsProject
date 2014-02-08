@@ -1,0 +1,25 @@
+function [ dist ] = evaluate_quantative( data )
+%EVALUATE_QUANTATIVE Summary of this function goes here
+%   Detailed explanation goes here
+BINS = 256;
+pos_hist = zeros(BINS, 1);;
+ambiguous_hist = zeros(BINS, 1);;
+neg_golgi_hist = zeros(BINS, 1);;
+
+for i=1:numel(data.score)
+    pos_golgi = data.score{i}(data.mask{i} == 2);
+    ambiguous = data.score{i}(data.mask{i} == 1);
+    neg_golgi = data.score{i}(data.mask{i} == 0);
+    
+    pos_hist = pos_hist + imhist(pos_golgi);
+    ambiguous_hist = ambiguous_hist + imhist(ambiguous);
+    neg_golgi_hist = neg_golgi_hist + imhist(neg_golgi);
+end
+
+dist.pos_hist = pos_hist;
+dist.ambiguous_hist = ambiguous_hist;
+dist.neg_hist = neg_golgi_hist;
+
+%could normalise
+
+end

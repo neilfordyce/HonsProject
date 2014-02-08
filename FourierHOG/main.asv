@@ -42,7 +42,7 @@ Image = [];
 for m = 1:length(data.image_filename)
     Image{m} = im2double(rgb2gray(imread(data.image_filename{m})));
     Image{m} = imresize(Image{m}, tas_params.scale);
-    data.mask{m} = read_mask(data.gt_filename{m}, tas_params.scale);
+    mask{m} = read_mask(data.gt_filename{m}, tas_params.scale);
 end
 
 %% computing features
@@ -82,23 +82,23 @@ for ifold = 1:5
         F = read_feature(feature_dir, i);
         % indifferent positions
         se = strel('disk',  param.indifferenceRadius, 0);
-        dmask = imdilate(data.mask{i}, se);
+        dmask = imdilate(mask{i}, se);
         % add positive samples around the centers
         se = [1 1 1;1 1 1;1 1 1];
-        data.mask{i} = imdilate(data.mask{i}, se);
+        mask{i} = imdilate(mask{i}, se);
         
-        data.mask{i}( xor(dmask, data.mask{i}) ) = 0.5;
+        mask{i}( xor(dmask, mask{i}) ) = 0.5;
         %% downsampling
         %number of pos samples is defined by the number available to take
-        total_pixels = numel(data.mask{i}(:));
-        pos_pixels = numel(data.mask{i}(data.mask{i}==2));
+        total_pixels = numel(mask{i}(:));
+        pos_pixels = numel(mask{i}(mask{i}==2));
         pos_sample_count = round((pos_pixels / total_pixels) * param.pos_sample_multiplier)
         
-        index1 = find(data.mask{i}(:) == 2);
+        index1 = find(mask{i}(:) == 2);
         index2 = randsample(numel(index1), pos_sample_count);   % draw positive samples from image
         Pos{i} = F(index1(index2), :);
         
-        index1 = find(data.mask{i}(:) == 0);
+        index1 = find(mask{i}(:) == 0);
         index2 = randsample(numel(index1), param.neg_sample_count);   % draw 3000 negative samples per image
         Neg{i} = F(index1(index2), :);
     end
@@ -126,15 +126,15 @@ for ifold = 1:5
         end
         F = read_feature(feature_dir, i);
         se = strel('disk',  param.indifferenceRadius   ,0);
-        dmask = imdilate(data.mask{i}, se);
+        dmask = imdilate(mask{i}, se);
         se = [1 1 1;1 1 1;1 1 1];
-        data.mask{i} = imdilate(data.mask{i}, se);
-        data.mask{i}( xor(dmask, data.mask{i}) ) = 0.5;
+        mask{i} = imdilate(mask{i}, se);
+        mask{i}( xor(dmask, mask{i}) ) = 0.5;
         %% detection
         votes =  F * model.w(1:end-1)' + model.w(end);
         Y_hat = reshape(votes, [size(Image{1}, 1), size(Image{1}, 2)]);
         %% sample negative samples based on the distances to the hyperplane
-        Y_hat = max(Y_hat + 1, 0) .* (data.mask{i} == 0);
+        Y_hat = max(Y_hat + 1, 0) .* (mask{i} == 0);
         index = unique(randsample(numel(Y_hat), 3000, true, Y_hat(:)));
         HardNeg{i} = F(index, :);
     end
@@ -164,10 +164,9 @@ for ifold = 1:5
         scale_Y_hat = step(vision.ContrastAdjuster, Y_hat); %Contrast scale the certainties image
         imwrite(scale_Y_hat, fullfile(Y_hat_dir, [data.name{i} '.jpg'])); %Store the certainty image
 
-        data.score{i} = scale_Y_hat;
+        data.score = scale_Y_hat;
     end
     % results are accumulated in the cross-validation process
 end
 %% evaluate 
-data.dist = evaluate_quantative( data );
-plot_evaluation(data);
+data.distsevaluate_quantative( data )
