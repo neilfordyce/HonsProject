@@ -64,7 +64,6 @@ end
 
 fprintf('Feature Dimension: %d \n' ,size(F,2) );
 
-data.dets = cell(1,N);
 data.score = cell(1,N);
 
 for ifold = 1:5
@@ -80,14 +79,7 @@ for ifold = 1:5
     % get mask and data
     for i = trainIndex
         F = read_feature(feature_dir, i);
-        % indifferent positions
-        se = strel('disk',  param.indifferenceRadius, 0);
-        dmask = imdilate(data.mask{i}, se);
-        % add positive samples around the centers
-        se = [1 1 1;1 1 1;1 1 1];
-        data.mask{i} = imdilate(data.mask{i}, se);
-        
-        data.mask{i}( xor(dmask, data.mask{i}) ) = 0.5;
+
         %% downsampling
         %number of pos samples is defined by the number available to take
         total_pixels = numel(data.mask{i}(:));
@@ -125,11 +117,7 @@ for ifold = 1:5
             continue;
         end
         F = read_feature(feature_dir, i);
-        se = strel('disk',  param.indifferenceRadius   ,0);
-        dmask = imdilate(data.mask{i}, se);
-        se = [1 1 1;1 1 1;1 1 1];
-        data.mask{i} = imdilate(data.mask{i}, se);
-        data.mask{i}( xor(dmask, data.mask{i}) ) = 0.5;
+
         %% detection
         votes =  F * model.w(1:end-1)' + model.w(end);
         Y_hat = reshape(votes, [size(Image{1}, 1), size(Image{1}, 2)]);
@@ -164,7 +152,7 @@ for ifold = 1:5
         scale_Y_hat = step(vision.ContrastAdjuster, Y_hat); %Contrast scale the certainties image
         imwrite(scale_Y_hat, fullfile(Y_hat_dir, [data.name{i} '.jpg'])); %Store the certainty image
 
-        data.score{i} = scale_Y_hat;
+        data.score{i} = Y_hat;
     end
     % results are accumulated in the cross-validation process
 end
