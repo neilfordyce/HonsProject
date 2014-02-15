@@ -157,5 +157,5 @@ for ifold = 1:5
     % results are accumulated in the cross-validation process
 end
 %% evaluate 
-data.dist = evaluate_quantative( data );
+[data.dist, data.performance_error] = evaluate_quantative( data );
 plot_evaluation(data);
