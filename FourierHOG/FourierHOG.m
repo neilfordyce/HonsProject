@@ -155,4 +155,4 @@ Fdetail = [i_featureDetail; mFdetail; cFdetail];
 
 end
 
-
+%featureDetail(:,end) is all of the rotation orders, i.e. m(i) in the paper

@@ -39,7 +39,6 @@ function [area_score] = area(pos_hist, pos_cen, neg_hist, neg_cen)
 
 %Find the frequency where histograms intersect
 step_size = 0.01;
-freq_diff_min = inf;
 neg_intercept = 0;
 pos_intercept = 0;
 %Step along histograms in the range where they both have bins defined
@@ -51,25 +50,40 @@ for i=pos_cen(1):step_size:neg_cen(end)
     %Find the point where the frequencies are closest
     neg_freq = neg_hist(neg_thresh);
     pos_freq = pos_hist(pos_thresh);
-    freq_diff = abs(neg_freq - pos_freq);
+    freq_diff = neg_freq - pos_freq;
     
-    %If a new min diff is found, update the 
-    if freq_diff < freq_diff_min
-        freq_diff_min = freq_diff;
+    %Set up var to store the value of the last freq_diff on the first iteration
+    if ~ exist('last_freq_diff', 'var')
+        last_freq_diff = freq_diff;
+    end
+    
+    %Intersection occurs if the difference between the two freqs changes
+    %sign from the last iteration, or if they are equal
+    if freq_diff * last_freq_diff <= 0
         pos_intercept = pos_thresh;
         neg_intercept = neg_thresh;
     end
+    
+    %Store for the next iteration
+    last_freq_diff = freq_diff;
 end
 
 %Crop the histograms to enclose only the area trapped between them
 pos_hist = pos_hist(1:pos_intercept);
 neg_hist = neg_hist(neg_intercept:end);
 
-%Sum to get the area
-area_score = sum([pos_hist, neg_hist]);
+%Display the cropped histograms
+%{
+pos_cen = pos_cen(1:pos_intercept);
+neg_cen = neg_cen(neg_intercept:end);
+pos_intercept
+neg_intercept
+figure
+plot(pos_cen, pos_hist); hold on; plot(neg_cen, neg_hist);
+%}
 
-%Normalise by number of histograms
+%Sum to get the area
 %1 is worst case performance - fully overlapped, 0 is ideal
-area_score = area_score / 2;
+area_score = sum([pos_hist, neg_hist]);
 
 end

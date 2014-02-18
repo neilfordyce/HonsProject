@@ -35,7 +35,7 @@ rands = randperm(length(data.image_filename));
 Y_hat_dir = fullfile('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs', ['FourierHOG_Prob', num2str(round(now*100000))]);
 mkdir(Y_hat_dir);
 
-feature_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\output\features';
+feature_dir = 'C:\Users\Neil\golgi_fourier_features';
 
 %%Read images and ground truth masks
 Image = [];
@@ -157,5 +157,5 @@ for ifold = 1:5
     % results are accumulated in the cross-validation process
 end
 %% evaluate 
-[data.dist, data.performance_error] = evaluate_quantative( data );
+[data.dist, data.performance_score] = evaluate_quantative( data );
 plot_evaluation(data);
