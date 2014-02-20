@@ -44,8 +44,8 @@ pos_intercept = 0;
 %Step along histograms in the range where they both have bins defined
 for i=pos_cen(1):step_size:neg_cen(end)
     %Count the number of bins below the threshold
-    neg_thresh = numel(neg_cen(neg_cen <= i)) + 1;
-    pos_thresh = numel(pos_cen(pos_cen <= i)) + 1;
+    neg_thresh = numel(neg_cen(neg_cen <= i));
+    pos_thresh = numel(pos_cen(pos_cen <= i));
     
     %Find the point where the frequencies are closest
     neg_freq = neg_hist(neg_thresh);
