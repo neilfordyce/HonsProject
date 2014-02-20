@@ -1,3 +1,4 @@
+%%TODO Clean up here
 %% Try the code on a computing server.
 % It will compue and store the feautres pixel-wisely for 30 792 * 636 pixel
 % images, so it requires 30g memory to run.
@@ -6,8 +7,8 @@ close all
 dbstop if error
 
 % parameters
+load_params  %training params
 param.featureScale = 6;
-param.NMS_OV  = 0;  %non-max. suppression
 param.bbRadius = 30;
 param.indifferenceRadius = param.bbRadius;
 param.sample_count = 30;
@@ -26,8 +27,7 @@ addpath(genpath('/home/liu/Matlab/liblinear-1.8'));
 % then add the path to the TAS package
 addpath(genpath('/home/liu/Dropbox/doc/IJCV/code/FourierHOG/TAS'));
 
-%% load data and TAS setting
-search  %training tas_params
+%% load data
 data = load_data('C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images', 1:param.sample_count);
 rands = randperm(length(data.image_filename));
 
@@ -35,14 +35,14 @@ rands = randperm(length(data.image_filename));
 Y_hat_dir = fullfile('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs', ['FourierHOG_Prob', num2str(round(now*100000))]);
 mkdir(Y_hat_dir);
 
-feature_dir = 'C:\Users\Neil\golgi_fourier_features';
+feature_dir = 'C:\Users\Neil\golgi_fourier_features_30';
 
 %%Read images and ground truth masks
 Image = [];
 for m = 1:length(data.image_filename)
     Image{m} = im2double(rgb2gray(imread(data.image_filename{m})));
-    Image{m} = imresize(Image{m}, tas_params.scale);
-    data.mask{m} = read_mask(data.gt_filename{m}, tas_params.scale);
+    Image{m} = imresize(Image{m}, params.scale);
+    data.mask{m} = read_mask(data.gt_filename{m}, params.scale);
 end
 
 %% computing features

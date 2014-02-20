@@ -1,14 +1,14 @@
 %%AUTHOR Neil Fordyce
 %%DATE   28/01/14
-function [ ] = qualitative( data, tas_params, output_path )
+function [ ] = qualitative( data, params, output_path )
 %Sequentially passes all the data into showboxes() to mark the detetections
 %and output to file if output_path is specified
     for i=1:numel(data.image_filename)
         img = imread(data.image_filename{i});
-        img = imresize(img, tas_params.scale);
+        img = imresize(img, params.scale);
         
         scores = data.score{i};
-        det_count = numel(scores(scores > tas_params.cand_threshold));
+        det_count = numel(scores(scores > params.cand_threshold));
 
         dets = data.dets{i};
         dets = dets';

@@ -153,6 +153,10 @@ cFdetail =[cFdetail; cFdetail(~ifreal,:)];
 Feature = [iF mF cF];
 Fdetail = [i_featureDetail; mFdetail; cFdetail];
 
+%subsample feature space
+load('maxIndex.mat');
+Feature = Feature(:, maxIndex==1);
+Fdetail = Fdetail(:, maxIndex==1);
 end
 
 %featureDetail(:,end) is all of the rotation orders, i.e. m(i) in the paper

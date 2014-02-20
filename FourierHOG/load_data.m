@@ -4,9 +4,6 @@ function [ins] = load_data(data_dir, image_indices)
 imagedir   = [data_dir, '/golgi'];
 gt_dir     = [data_dir, '/output/masks'];
 
-% Constants
-scoretype = 'margin';
-
 % Files
 D = dir([imagedir, '/*jpg']);
 if(~exist('image_indices')), image_indices=1:length(D); end;
@@ -28,6 +25,5 @@ for m = 1:M
     % GROUNDTRUTH
     ins.gt_filename{m} = sprintf('%s/%s.jpg', gt_dir, ins.name{m});
 end
-return
-end
 
+end

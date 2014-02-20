@@ -59,9 +59,9 @@ gch = GraphCut('open', Dc, 70*Sc, exp(-Vc*30), exp(-Hc*30));
 gch = GraphCut('close', gch);
 
 % show results
-imshow(im);
+imshow(em_im);
 hold on;
-PlotLabels(L);
+PlotLabels(~L);
 
 
 
@@ -78,7 +78,7 @@ Am(bL) = .5;
 ih = imagesc(LL); 
 set(ih, 'AlphaData', Am);
 colorbar;
-colormap 'jet';
+%colormap 'jet';
 
 %-----------------------------------------------%
 function [hC vC] = SpatialCues(im)
