@@ -1,69 +1,90 @@
+% Author Neil Fordyce
 function [L]=segment(F)
-close all
 
-% read an image
-im = imread('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565287217\110511C_1_IPL.jpg');
-im = im2double(im);
-%load('C:\Users\Neil\golgi_fourier_features\F1.mat', 'F');
+em_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\';
+prob_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565287217\';
+output_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\segment\';
+prob_files = dir([prob_dir, '*jpg']);
 
-em_im = imread('C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\110511C_1_IPL.jpg');
-em_im = rgb2gray(em_im);
-em_im = imresize(em_im, 0.2);
-%em_im = em_im(100:end-100, 100:end-100);
+file_count = length(prob_files);
+file_count = 1;
 
-%{
-F = reshape(F, [size(im), 233]);
-%F = F(100:end-100, 100:end-100, :);
-%im = im(100:end-100, 100:end-100);
+for file_i = 1:file_count
+    filename = prob_files(file_i).name;
+    im = imread(fullfile(prob_dir, filename));
+    em_im = imread(fullfile(em_dir, filename));
 
-F = im2double(F);
+    %im = slic_segment('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565287217\110511C_1_IPL.jpg', 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\110511C_1_IPL.jpg');
 
-Fr = F(:,:, 111);
-Fi = F(:,:, 112);
-%}
+    % read an image
+    %im = imread('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565287217\110511C_1_IPL.jpg');
+    im = im2double(im);
+    %load('C:\Users\Neil\golgi_fourier_features\F1.mat', 'F');
 
-%{
-This was a stupid idea
-    Fc=complex(Fr,Fi);
-angleFc = angle(Fc);
-angleFc = atan(angleFc);
-angleFc = im2double(angleFc);
-%}
+    %em_im = imread('C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\110511C_1_IPL.jpg');
+    em_im = rgb2gray(em_im);
+    em_im = imresize(em_im, 0.2);
+    %em_im = im2double(em_im);
+    %em_im = em_im(100:end-100, 100:end-100);
 
-%[Dc, dif]=data_cost_hist(im);
-[Dc, dif]=data_cost(im);
-%[Dc, dif]=data_cost_kmeans(im);
+    %{
+    F = reshape(F, [size(im), 233]);
+    %F = F(100:end-100, 100:end-100, :);
+    %im = im(100:end-100, 100:end-100);
 
-% smoothness term: 
-% constant part
-Sc = [0 1;
-      1 0];
-Sc = single(Sc);
-% spatialy varying part
-blur_em_im = conv2(em_im, fspecial('gauss',[20 20]), 'same');
-[Hc Vc] = gradient(im2double(blur_em_im));
-%Weight the orientations by the certainty
-Hc = (Hc .* dif).^2;  %TODO Maybe subtract mean
-Vc = (Vc .* dif).^2;
-%[Hc Vc] = gradient(Fi);
-%[Hc Vc] = gradient(im2double(em_im), fspecial('gauss',[3 3]), 'symmetric');
-%[Hc Vc] = SpatialCues(im2double(em_im));
+    F = im2double(F);
 
-%cut the graph
-%GraphCut('open', DataCost, SmoothnessCost, vC, hC);
-%gch = GraphCut('open', Dc, 30*Sc, exp(-Vc*5), exp(-Hc*5));
-gch = GraphCut('open', Dc, 80*Sc, exp(-Vc*2), exp(-Hc*2)); %data_cost(im)
-%gch = GraphCut('open', Dc, 2*Sc, exp(-Vc*50), exp(-Hc*50)); %data_cost_hist(im)
-%gch = GraphCut('open', Dc, 50*Sc, exp(-Vc*5), exp(-Hc*5)); %data_cost_kmeans(im)
-%gch = GraphCut('open', Dc, Sc);
-[gch L] = GraphCut('expand',gch, 5);
-gch = GraphCut('close', gch);
+    Fr = F(:,:, 111);
+    Fi = F(:,:, 112);
+    %}
 
-% show results
-imshow(em_im);
-hold on;
-PlotLabels(L);
+    %{
+    This was a stupid idea
+        Fc=complex(Fr,Fi);
+    angleFc = angle(Fc);
+    angleFc = atan(angleFc);
+    angleFc = im2double(angleFc);
+    %}
 
+    %[Dc, dif]=data_cost_hist(im);
+    [Dc, dif]=data_cost(im);
+    %[Dc, dif]=data_cost_kmeans(im);
+
+    % smoothness term: 
+    % constant part
+    Sc = [0 1;
+          1 0];
+    Sc = single(Sc);
+    % spatialy varying part
+    blur_em_im = conv2(em_im, fspecial('gauss',[20 20]), 'same');
+    [Hc Vc] = gradient(im2double(blur_em_im));
+    %Weight the orientations by the certainty
+    Hc = (Hc .* dif).^2;  %TODO Maybe subtract mean
+    Vc = (Vc .* dif).^2;
+    %[Hc Vc] = gradient(Fi);
+    %[Hc Vc] = gradient(im2double(em_im), fspecial('gauss',[3 3]), 'symmetric');
+    %[Hc Vc] = SpatialCues(im2double(em_im));
+
+    %cut the graph
+    %GraphCut('open', DataCost, SmoothnessCost, vC, hC);
+    %gch = GraphCut('open', Dc, 30*Sc, exp(-Vc*5), exp(-Hc*5));
+    gch = GraphCut('open', Dc, 80*Sc, exp(-Vc*2), exp(-Hc*2)); %data_cost(im)
+    %gch = GraphCut('open', Dc, 2*Sc, exp(-Vc*50), exp(-Hc*50)); %data_cost_hist(im)
+    %gch = GraphCut('open', Dc, 50*Sc, exp(-Vc*5), exp(-Hc*5)); %data_cost_kmeans(im)
+    %gch = GraphCut('open', Dc, 150*Sc);
+    [gch L] = GraphCut('expand',gch, 5);
+    gch = GraphCut('close', gch);
+
+    % show results
+    %imshow(em_im);
+    %hold on;
+    ih = PlotLabels(L);
+    em_im = repmat(em_im, [1, 1, 3]);
+    em_im(ih>0)=ih(ih>0);
+    imshow(em_im);
+    imwrite(em_im, fullfile(output_dir, filename));
+end
+end
 
 function [Dc, dif] = data_cost(I)
     mean_I = mean(I(:));
@@ -125,7 +146,7 @@ function [Dc, dif] = data_cost_kmeans(I)
     %data = im; 
 end
 
-function ih = PlotLabels(L)
+function LL = PlotLabels(L)
 
 L = single(L);
 
@@ -160,4 +181,3 @@ for b=1:size(im,3)
 end
 end
 
-end
