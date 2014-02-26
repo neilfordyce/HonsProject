@@ -1,15 +1,19 @@
 % Author Neil Fordyce
 function [L]=segment(F)
 
+%top, bottom, left, right
+crop_box = [15,15,15,80];
+
 em_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\';
 prob_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565287217\';
 output_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\segment\';
 prob_files = dir([prob_dir, '*jpg']);
 
 file_count = length(prob_files);
-file_count = 1;
+%file_count = 1;
 
-for file_i = 1:file_count
+for file_i = 1:file_count 
+%for file_i = 7:7
     filename = prob_files(file_i).name;
     im = imread(fullfile(prob_dir, filename));
     em_im = imread(fullfile(em_dir, filename));
@@ -18,6 +22,7 @@ for file_i = 1:file_count
 
     % read an image
     %im = imread('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565287217\110511C_1_IPL.jpg');
+    im = im(crop_box(1):end-crop_box(2), crop_box(3):end-crop_box(4));
     im = im2double(im);
     %load('C:\Users\Neil\golgi_fourier_features\F1.mat', 'F');
 
@@ -25,7 +30,7 @@ for file_i = 1:file_count
     em_im = rgb2gray(em_im);
     em_im = imresize(em_im, 0.2);
     %em_im = im2double(em_im);
-    %em_im = em_im(100:end-100, 100:end-100);
+    em_im = em_im(crop_box(1):end-crop_box(2), crop_box(3):end-crop_box(4));
 
     %{
     F = reshape(F, [size(im), 233]);
@@ -63,12 +68,13 @@ for file_i = 1:file_count
     Vc = (Vc .* dif).^2;
     %[Hc Vc] = gradient(Fi);
     %[Hc Vc] = gradient(im2double(em_im), fspecial('gauss',[3 3]), 'symmetric');
-    %[Hc Vc] = SpatialCues(im2double(em_im));
+    [Hc Vc] = SpatialCues(im2double(em_im));
 
     %cut the graph
     %GraphCut('open', DataCost, SmoothnessCost, vC, hC);
     %gch = GraphCut('open', Dc, 30*Sc, exp(-Vc*5), exp(-Hc*5));
-    gch = GraphCut('open', Dc, 80*Sc, exp(-Vc*2), exp(-Hc*2)); %data_cost(im)
+    %gch = GraphCut('open', Dc*100, 150*Sc, tanh(Vc*0.5), tanh(Hc*0.5)); %data_cost(im)
+    gch = GraphCut('open', Dc, 150*Sc, exp(-Vc*255), exp(-Hc*255)); %data_cost(im)
     %gch = GraphCut('open', Dc, 2*Sc, exp(-Vc*50), exp(-Hc*50)); %data_cost_hist(im)
     %gch = GraphCut('open', Dc, 50*Sc, exp(-Vc*5), exp(-Hc*5)); %data_cost_kmeans(im)
     %gch = GraphCut('open', Dc, 150*Sc);
@@ -94,9 +100,12 @@ function [Dc, dif] = data_cost(I)
 
     %dif = (dif-min(dif(:))) ./ (max(dif(:)-min(dif(:))));
 
+    
     Dc(:,:,1) = ((numel(dif)*dif)./(sum(dif(:))*2));
+    %Dc(:,:,1) = 
     %Dc(:,:,1) = (dif./(variance*2));
-    Dc(:,:,2) = 1-Dc(:,:,1);
+    Dc(:,:,2) = 1-Dc(:,:,1).^.5;  %lower threshold to reduce false positives
+    Dc(:,:,2) = Dc(:,:,2)*2; %higher threshold to reduce false positives
 end
 
 function [Dc, dif] = data_cost_hist(I)
@@ -167,17 +176,13 @@ colorbar;
 end
 %-----------------------------------------------%
 function [hC vC] = SpatialCues(im)
-g = fspecial('gauss', [13 13], sqrt(13));
+g = fspecial('gauss', [5 5], sqrt(13));
 dy = fspecial('sobel');
-vf = conv2(g, dy, 'valid');
-sz = size(im);
+dx = dy';
+vfy = conv2(g, dy, 'valid');
+vfx = conv2(g, dx, 'valid');
 
-vC = zeros(sz(1:2));
-hC = vC;
-
-for b=1:size(im,3)
-    vC = max(vC, abs(imfilter(im(:,:,b), vf, 'symmetric')));
-    hC = max(hC, abs(imfilter(im(:,:,b), vf', 'symmetric')));
-end
+vC = abs(imfilter(im, vfy));
+hC = abs(imfilter(im, vfx));
 end
 
