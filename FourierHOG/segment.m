@@ -13,9 +13,9 @@ output_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\segme
 prob_files = dir([prob_dir, '*jpg']);
 
 file_count = length(prob_files);
-%file_count = 1;
+file_count = 3;
 
-for file_i = 1:file_count 
+for file_i = 3:file_count 
 %for file_i = 7:7
     filename = prob_files(file_i).name;
     im = imread(fullfile(prob_dir, filename));
@@ -64,30 +64,30 @@ for file_i = 1:file_count
           1 0];
     Sc = single(Sc);
     % spatialy varying part
-    blur_em_im = conv2(em_im, fspecial('gauss',[20 20]), 'same');
-    [Hc Vc] = gradient(im2double(blur_em_im));
+    %blur_em_im = conv2(em_im, fspecial('gauss',[20 20]), 'same');
+    %[Hc Vc] = gradient(im2double(blur_em_im));
     %Weight the orientations by the certainty
-    Hc = (Hc .* dif).^2;  %TODO Maybe subtract mean
-    Vc = (Vc .* dif).^2;
+    %Hc = (Hc .* dif).^2;  %TODO Maybe subtract mean
+    %Vc = (Vc .* dif).^2;
     %[Hc Vc] = gradient(Fi);
     %[Hc Vc] = gradient(im2double(em_im), fspecial('gauss',[3 3]), 'symmetric');
-    [Hc Vc] = SpatialCues(im2double(em_im));
+    [Hc Vc] = GradientOrientation(im2double(em_im));
 
     %cut the graph
     %GraphCut('open', DataCost, SmoothnessCost, vC, hC);
     %gch = GraphCut('open', Dc, 30*Sc, exp(-Vc*5), exp(-Hc*5));
     %gch = GraphCut('open', Dc*100, 150*Sc, tanh(Vc*0.5), tanh(Hc*0.5)); %data_cost(im)
-    gch = GraphCut('open', Dc, 150*Sc, exp(-Vc*255), exp(-Hc*255)); %data_cost(im)
+    gch = GraphCut('open', Dc, 150*Sc, exp(-Vc*250), exp(-Hc*250)); %data_cost(im)
     %gch = GraphCut('open', Dc, 2*Sc, exp(-Vc*50), exp(-Hc*50)); %data_cost_hist(im)
     %gch = GraphCut('open', Dc, 50*Sc, exp(-Vc*5), exp(-Hc*5)); %data_cost_kmeans(im)
     %gch = GraphCut('open', Dc, 150*Sc);
     [gch L] = GraphCut('expand',gch, 5);
     gch = GraphCut('close', gch);
 	
-	Dc1 = Dc(:,:,1);
-	Dc2 = Dc(:,:,2);
-	HcVc = Hc+Vc;
-	L = GCMEX(zeros(size(im(:))), [Dc1(:);Dc2(:)], PAIRWISE, Sc,1);
+	%Dc1 = Dc(:,:,1);
+	%Dc2 = Dc(:,:,2);
+	%HcVc = Hc+Vc;
+	%L = GCMEX(zeros(size(im(:))), [Dc1(:);Dc2(:)], PAIRWISE, Sc,1);
 
     % show results
     %imshow(em_im);
@@ -183,15 +183,17 @@ colorbar;
 
 end
 %-----------------------------------------------%
-function [hC vC] = SpatialCues(im)
-%TODO This can probably be replaced with gradient function
+function [hC vC] = GradientOrientation(I)
+%TODO 
+%This can probably be replaced with imgradient function for matlab ver >=2012b
 g = fspecial('gauss', [5 5], sqrt(13));
-dy = fspecial('sobel');
-dx = dy';
-vfy = conv2(g, dy, 'valid');
-vfx = conv2(g, dx, 'valid');
+dy = conv2(g, fspecial('sobel'), 'valid');
+dx = conv2(g, fspecial('sobel')', 'valid');
 
-vC = abs(imfilter(im, vfy, 'symmetric'));
-hC = abs(imfilter(im, vfx', 'symmetric'));
+vC = abs(imfilter(I, dy, 'symmetric'));
+hC = abs(imfilter(I, dx, 'symmetric'));
+
+%vC = step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,max(abs(vC(:)))]), vC);
+%hC = step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,max(abs(hC(:)))]), hC);
 end
 
