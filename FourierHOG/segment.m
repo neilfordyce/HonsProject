@@ -1,5 +1,5 @@
 % Author Neil Fordyce
-function [L]=segment(F)
+function [L]=segment()
 
 %TODO use param.bbRadius
 %top, bottom, left, right
@@ -24,35 +24,13 @@ for file_i = 3:file_count
     %im = slic_segment('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565287217\110511C_1_IPL.jpg', 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\110511C_1_IPL.jpg');
 
     % read an image
-    %im = imread('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565287217\110511C_1_IPL.jpg');
     im = im(crop_box(1):end-crop_box(2), crop_box(3):end-crop_box(4));
     im = im2double(im);
-    %load('C:\Users\Neil\golgi_fourier_features\F1.mat', 'F');
 
-    %em_im = imread('C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\110511C_1_IPL.jpg');
     em_im = rgb2gray(em_im);
     em_im = imresize(em_im, 0.2);
     %em_im = im2double(em_im);
     em_im = em_im(crop_box(1):end-crop_box(2), crop_box(3):end-crop_box(4));
-
-    %{
-    F = reshape(F, [size(im), 233]);
-    %F = F(100:end-100, 100:end-100, :);
-    %im = im(100:end-100, 100:end-100);
-
-    F = im2double(F);
-
-    Fr = F(:,:, 111);
-    Fi = F(:,:, 112);
-    %}
-
-    %{
-    This was a stupid idea
-        Fc=complex(Fr,Fi);
-    angleFc = angle(Fc);
-    angleFc = atan(angleFc);
-    angleFc = im2double(angleFc);
-    %}
 
     %[Dc, dif]=data_cost_hist(im);
     [Dc, dif]=data_cost(im);
@@ -64,13 +42,6 @@ for file_i = 3:file_count
           1 0];
     Sc = single(Sc);
     % spatialy varying part
-    %blur_em_im = conv2(em_im, fspecial('gauss',[20 20]), 'same');
-    %[Hc Vc] = gradient(im2double(blur_em_im));
-    %Weight the orientations by the certainty
-    %Hc = (Hc .* dif).^2;  %TODO Maybe subtract mean
-    %Vc = (Vc .* dif).^2;
-    %[Hc Vc] = gradient(Fi);
-    %[Hc Vc] = gradient(im2double(em_im), fspecial('gauss',[3 3]), 'symmetric');
     [Hc Vc] = GradientOrientation(im2double(em_im));
 
     %cut the graph
