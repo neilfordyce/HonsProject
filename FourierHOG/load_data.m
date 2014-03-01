@@ -2,7 +2,7 @@ function [ins] = load_data(data_dir, image_indices)
 
 % Directories
 imagedir   = [data_dir, '/golgi'];
-gt_dir     = [data_dir, '/output/masks'];
+gt_dir     = [data_dir, '/output/gt_masks_2'];
 
 % Files
 D = dir([imagedir, '/*jpg']);

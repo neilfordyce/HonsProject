@@ -1,11 +1,14 @@
 % Author Neil Fordyce
 function [L]=segment(F)
 
+%TODO use param.bbRadius
 %top, bottom, left, right
-crop_box = [15,15,15,80];
+load_params
+padding = param.featureScale * 5; % Zero padding size in FourierHOG.m
+crop_box = [padding,padding,padding,80]; % 80 is enough to crop off the calibration bar from all the images
 
 em_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\';
-prob_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565287217\';
+prob_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565692675\';
 output_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\segment\';
 prob_files = dir([prob_dir, '*jpg']);
 
@@ -80,6 +83,11 @@ for file_i = 1:file_count
     %gch = GraphCut('open', Dc, 150*Sc);
     [gch L] = GraphCut('expand',gch, 5);
     gch = GraphCut('close', gch);
+	
+	Dc1 = Dc(:,:,1);
+	Dc2 = Dc(:,:,2);
+	HcVc = Hc+Vc;
+	L = GCMEX(zeros(size(im(:))), [Dc1(:);Dc2(:)], PAIRWISE, Sc,1);
 
     % show results
     %imshow(em_im);
@@ -103,7 +111,7 @@ function [Dc, dif] = data_cost(I)
     
     Dc(:,:,1) = ((numel(dif)*dif)./(sum(dif(:))*2));
     %Dc(:,:,1) = 
-    %Dc(:,:,1) = (dif./(variance*2));
+    %Dc(:,:,1) = (dif./(variance*2));  %TODO Fix the maths below, difficult to see what's going on
     Dc(:,:,2) = 1-Dc(:,:,1).^.5;  %lower threshold to reduce false positives
     Dc(:,:,2) = Dc(:,:,2)*2; %higher threshold to reduce false positives
 end
@@ -176,13 +184,14 @@ colorbar;
 end
 %-----------------------------------------------%
 function [hC vC] = SpatialCues(im)
+%TODO This can probably be replaced with gradient function
 g = fspecial('gauss', [5 5], sqrt(13));
 dy = fspecial('sobel');
 dx = dy';
 vfy = conv2(g, dy, 'valid');
 vfx = conv2(g, dx, 'valid');
 
-vC = abs(imfilter(im, vfy));
-hC = abs(imfilter(im, vfx));
+vC = abs(imfilter(im, vfy, 'symmetric'));
+hC = abs(imfilter(im, vfx', 'symmetric'));
 end
 

@@ -21,7 +21,7 @@ else
     complex_g = complex(dx,dy);
 end
 
-complex_g = padarray(complex_g,[padSize,padSize],0);
+complex_g = padarray(complex_g,[padSize,padSize]);
 %% project to fourier space
 [m,n] = size(complex_g);
 order = [0 1 2 3 4];  % only contrast-insensitive? and postive frequncies
@@ -154,9 +154,9 @@ Feature = [iF mF cF];
 Fdetail = [i_featureDetail; mFdetail; cFdetail];
 
 %subsample feature space
-load('maxIndex.mat');
-Feature = Feature(:, maxIndex==1);
-Fdetail = Fdetail(:, maxIndex==1);
+%load('maxIndex.mat');
+%Feature = Feature(:, maxIndex==1);
+%Fdetail = Fdetail(maxIndex==1, :);
 end
 
 %featureDetail(:,end) is all of the rotation orders, i.e. m(i) in the paper

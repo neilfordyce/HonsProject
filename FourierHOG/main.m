@@ -6,14 +6,10 @@ clearvars
 close all
 dbstop if error
 
+%TODO vary the size of bbRadius
+%TODO store params in model for future reference
 % parameters
 load_params  %training params
-param.featureScale = 6;
-param.bbRadius = 30;
-param.indifferenceRadius = param.bbRadius;
-param.sample_count = 30;
-param.neg_sample_count = 3000;  %Per image
-param.pos_sample_multiplier = 50000;
 
 initrand();
 
@@ -35,14 +31,14 @@ rands = randperm(length(data.image_filename));
 Y_hat_dir = fullfile('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs', ['FourierHOG_Prob', num2str(round(now*100000))]);
 mkdir(Y_hat_dir);
 
-feature_dir = 'C:\Users\Neil\golgi_fourier_features_30';
+feature_dir = 'C:\Users\Neil\golgi_fourier_features_gt2';
 
 %%Read images and ground truth masks
 Image = [];
 for m = 1:length(data.image_filename)
     Image{m} = im2double(rgb2gray(imread(data.image_filename{m})));
-    Image{m} = imresize(Image{m}, params.scale);
-    data.mask{m} = read_mask(data.gt_filename{m}, params.scale);
+    Image{m} = imresize(Image{m}, param.scale);
+    data.mask{m} = read_mask(data.gt_filename{m}, param.scale);
 end
 
 %% computing features
@@ -135,6 +131,7 @@ for ifold = 1:5
     size(trainX)
     model = train([ones(size(Pos1,1),1); zeros(size(HardNegM,1),1) ], trainX, '-B 1 -c 1');
     model.w(1:end-1) = model.w(1:end-1) ./ ABSMAX;
+    %model_class = classRF_train(trainX,[ones(size(Pos1,1),1); zeros(size(HardNegM,1),1) ]); 
     save('model.mat', 'model');
     toc
     
@@ -148,6 +145,9 @@ for ifold = 1:5
         F = read_feature(feature_dir, i);
         votes = F * model.w(1:end-1)' + model.w(end);
         Y_hat = reshape(votes, [size(Image{1}, 1), size(Image{1}, 2)]);
+        %Y_hat = classRF_predict(F,model_class);
+        %Y_hat = reshape(Y_hat, size(Image{1}));
+        %Y_hat = 
         
         scale_Y_hat = step(vision.ContrastAdjuster, Y_hat); %Contrast scale the certainties image
         imwrite(scale_Y_hat, fullfile(Y_hat_dir, [data.name{i} '.jpg'])); %Store the certainty image
@@ -158,4 +158,8 @@ for ifold = 1:5
 end
 %% evaluate 
 [data.dist, data.performance_score] = evaluate_quantative( data );
+%Store performance data
+evaluation_data.dist = data.dist; evaluation_data.performance_score=data.performance_score;
+save(Y_hat_dir, 'evaluation_data');
+save(Y_hat_dir, 'param');
 plot_evaluation(data);
