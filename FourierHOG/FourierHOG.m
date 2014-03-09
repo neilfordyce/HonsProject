@@ -1,4 +1,4 @@
-function [Feature, Fdetail] = FourierHOG(I,binSize)
+function [Feature, Fdetail] = FourierHOG(I,binSize,maxIndex)
 
 if ~exist('binSize', 'var') || isempty(binSize),
     binSize = 6;
@@ -24,9 +24,9 @@ end
 complex_g = padarray(complex_g,[padSize,padSize]);
 %% project to fourier space
 [m,n] = size(complex_g);
-order = [0 1 2 3 4];  % only contrast-insensitive? and postive frequncies
+order = [0 1 2 ];%3 4];  % only contrast-insensitive? and postive frequncies
 f_g = zeros([m,n,numel(order)]);
-phase_g = angle(complex_g);
+phase_g = angle(complex_g);     %conversion to polar-coords of gradient image
 mag_g = abs(complex_g);
 
 % local gradient magnitude normalization, scale = sigma * 2

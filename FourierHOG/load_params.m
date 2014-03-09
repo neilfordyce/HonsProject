@@ -1,7 +1,7 @@
 % Training Parameters
-param.featureScale = 5; %TODO Increase feature scale with image resize
+param.featureScale = 6; %TODO Increase feature scale with image resize
 
-param.sample_count = 30;
+param.sample_count = 30;	%Number of images to use
 
 param.neg_sample_count = 3000;  %Per image
 

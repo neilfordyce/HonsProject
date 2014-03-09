@@ -160,6 +160,6 @@ end
 [data.dist, data.performance_score] = evaluate_quantative( data );
 %Store performance data
 evaluation_data.dist = data.dist; evaluation_data.performance_score=data.performance_score;
-save(Y_hat_dir, 'evaluation_data');
-save(Y_hat_dir, 'param');
+save([Y_hat_dir, '\evaluation_data'], 'evaluation_data');
+save([Y_hat_dir, '\param'], 'param');
 plot_evaluation(data);

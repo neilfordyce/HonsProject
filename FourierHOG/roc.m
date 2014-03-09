@@ -31,7 +31,7 @@ end
 
 %Plot the RoC curve
 figure
-plot(fp, tp)
+plot(fp, tp)  %histograms are already normalised so no need for fp/fp+tp
 axis tight
 xlabel('FP Rate')
 ylabel('TP Rate')

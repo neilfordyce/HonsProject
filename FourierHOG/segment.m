@@ -1,36 +1,36 @@
 % Author Neil Fordyce
-function [L]=segment()
+function [accuracy, TP_seg, FP_seg, FN_seg]=segment()
 
-%TODO use param.bbRadius
-%top, bottom, left, right
-load_params
-padding = param.featureScale * 5; % Zero padding size in FourierHOG.m
-crop_box = [padding,padding,padding,80]; % 80 is enough to crop off the calibration bar from all the images
+load_params;
+accuracy = []; TP_seg=0; FP_seg=0; FN_seg=0;
 
+gt_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\output\gt_masks_2';
 em_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\';
-prob_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565931169\';
+prob_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73566610573\';
 output_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\segment\';
 prob_files = dir([prob_dir, '*jpg']);
 
 file_count = length(prob_files);
 %file_count = 3;
 
-for file_i = 1:file_count 
-%for file_i = 13:13
+for file_i = 1:file_count
+%for file_i = 14:14
+    % read the SVM image, electron micrograph image and ground truth for evaluation
     filename = prob_files(file_i).name;
     im = imread(fullfile(prob_dir, filename));
     em_im = imread(fullfile(em_dir, filename));
 
     %im = slic_segment('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565287217\110511C_1_IPL.jpg', 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\110511C_1_IPL.jpg');
-
-    % read an image
-    im = im(crop_box(1):end-crop_box(2), crop_box(3):end-crop_box(4));
+    im = guard(im);
     im = im2double(im);
 
     em_im = rgb2gray(em_im);
     em_im = imresize(em_im, 0.2);
     %em_im = im2double(em_im);
-    em_im = em_im(crop_box(1):end-crop_box(2), crop_box(3):end-crop_box(4));
+    em_im = guard(em_im);
+    
+    gt = read_mask( fullfile(gt_dir, filename), param.scale);
+    gt = guard(gt);
 
     %[Dc, dif]=data_cost_hist(im);
     [Dc, dif]=data_cost(im);
@@ -60,7 +60,40 @@ for file_i = 1:file_count
 	%HcVc = Hc+Vc;
 	%L = GCMEX(zeros(size(im(:))), [Dc1(:);Dc2(:)], PAIRWISE, Sc,1);
 
-    %% Pruning
+    L = prune_labels(L);
+    
+    [acc, F1, TP, FP, FN] = evaluate_segment(gt, L, 0.5);
+    accuracy = [accuracy, acc];
+    TP_seg = TP_seg + TP;
+    FP_seg = FP_seg + FP;
+    FN_seg = FN_seg + FN;
+        
+    %% Overlay labels on image 
+    %imshow(em_im);
+    %hold on;
+    ih = PlotLabels(L);
+    em_im = repmat(em_im, [1, 1, 3]);
+    em_im(ih>0)=ih(ih>0);
+    
+    %% Add evaluation scores to bottom
+    out_height = 40;
+    text_em_im = [em_im; zeros(out_height, size(em_im, 2), size(em_im,3))];
+    
+    htxtins = vision.TextInserter( sprintf('%#1.4f      ', acc));
+    htxtins.Color = [255,255,255]; % [red, green, blue]
+    htxtins.FontSize = 24;
+    htxtins.Location = [ 1, size(em_im, 1) + out_height/2]; % [x y]
+    htxtins.Antialiasing = true;
+    htxtins.Font = 'Consolas';
+    text_em_im = step(htxtins, text_em_im);
+    
+    imshow(text_em_im, []);
+    imwrite(text_em_im, fullfile(output_dir, filename));
+end
+end
+
+function [L] = prune_labels(L)
+%% Prune labels with area below threshold
     % find the area of all connected comps
     CC = bwconncomp(L);
     STATS = regionprops(CC, 'Area');
@@ -81,16 +114,6 @@ for file_i = 1:file_count
     for i=1:numel(PixelIdxList)
        L(PixelIdxList{i})=1; 
     end
-    
-    %% show results
-    %imshow(em_im);
-    %hold on;
-    ih = PlotLabels(L);
-    em_im = repmat(em_im, [1, 1, 3]);
-    em_im(ih>0)=ih(ih>0);
-    imshow(em_im);
-    imwrite(em_im, fullfile(output_dir, filename));
-end
 end
 
 function [Dc, dif] = data_cost(I)
@@ -105,8 +128,8 @@ function [Dc, dif] = data_cost(I)
     Dc(:,:,1) = ((numel(dif)*dif)./(sum(dif(:))*2));
     %Dc(:,:,1) = 
     %Dc(:,:,1) = (dif./(variance*2));  %TODO Fix the maths below, difficult to see what's going on
-    Dc(:,:,2) = 1-Dc(:,:,1).^.5;  %lower threshold to reduce false positives
-    Dc(:,:,2) = Dc(:,:,2)*2; %higher threshold to reduce false positives
+    Dc(:,:,2) = 1-Dc(:,:,1);  
+    Dc(:,:,2) = (Dc(:,:,2).^.75)*2; %higher threshold to reduce false positives
 end
 
 function [Dc, dif] = data_cost_hist(I)
@@ -170,17 +193,13 @@ LL(:,:,3)=LL(:,:,1)*0;
 LL(:,:,1)=LL(:,:,1)*0;
 
 ih = imagesc(LL); 
-set(ih, 'AlphaData', Am);
-colorbar;
-%colormap 'jet';
-
+set(ih,'AlphaData',Am);
 end
 
 function [hC vC] = GradientOrientation(I)
 %TODO 
 %This can probably be replaced with imgradient function for matlab ver >=2012b
-g = fspecial('gauss', [5 5], sqrt(13));
-dy = conv2(g, fspecial('sobel'), 'valid');
+dy = conv2(fspecial('gauss', [5 5], sqrt(17)), fspecial('sobel'), 'valid');
 dx = dy';
 
 %abs because direction doesn't matter, just want to cost of finding boundaries 
@@ -188,7 +207,14 @@ dx = dy';
 vC = -abs(imfilter(I, dy, 'symmetric'));
 hC = -abs(imfilter(I, dx, 'symmetric'));
 
-%vC = step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,max(abs(vC(:)))]), vC);
-%hC = step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,max(abs(hC(:)))]), hC);
+%Use of an exponential function allows the gradients to be scaled
+%emphasising edges without raising the value of small gradients.  I.e.
+%scale in a non-linear fashion
+
+%vC = -((vC - mean(vC(:))).^2)/var(vC(:));
+%hC = -((hC - mean(hC(:))).^2)/var(hC(:));
+
+%vC = -step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,max(abs(vC(:)))]), vC);
+%hC = -step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,max(abs(hC(:)))]), hC);
 end
 

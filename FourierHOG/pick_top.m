@@ -3,6 +3,7 @@ function [ maxIndex ] = pick_top( w, top )
 %Returns a mask showing the location of the top weights in the feature
 %vector
 sortedWeights = unique(w(:));
+%sortedWeights = abs(sortedWeights);  %magnitude of weights is all that matters?
 maxWeights = sortedWeights(end-top+1:end);
 maxIndex = ismember(w, maxWeights);
 maxIndex = maxIndex(1:end-1);
