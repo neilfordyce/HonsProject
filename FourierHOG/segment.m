@@ -1,12 +1,14 @@
 % Author Neil Fordyce
-function [accuracy, TP_seg, FP_seg, FN_seg]=segment()
+function [performance]=segment()
 
+%TODO parameterise seg file as well
 load_params;
-accuracy = []; TP_seg=0; FP_seg=0; FN_seg=0;
+performance = {};  performance.false_seg = 0; performance.missed_seg = 0;
+accuracy = [];
 
 gt_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\output\gt_masks_2';
 em_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\';
-prob_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73566610573\';
+prob_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565931169\';
 output_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\segment\';
 prob_files = dir([prob_dir, '*jpg']);
 
@@ -20,7 +22,7 @@ for file_i = 1:file_count
     im = imread(fullfile(prob_dir, filename));
     em_im = imread(fullfile(em_dir, filename));
 
-    %im = slic_segment('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565287217\110511C_1_IPL.jpg', 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\110511C_1_IPL.jpg');
+    %im = slic_segment(im, em_im);
     im = guard(im);
     im = im2double(im);
 
@@ -44,6 +46,12 @@ for file_i = 1:file_count
     % spatialy varying part
     [Hc Vc] = GradientOrientation(im2double(em_im));
 
+%    sparseSc = sparseSmooth(em_im);
+    
+%    Dc1 = Dc(:, :, 1);
+%    Dc2 = Dc(:, :, 2);
+%    Dc = [Dc1(:) Dc2(:)]';
+    
     %cut the graph
     %GraphCut('open', DataCost, SmoothnessCost, vC, hC);
     %gch = GraphCut('open', Dc, 30*Sc, exp(-Vc*5), exp(-Hc*5));
@@ -62,11 +70,11 @@ for file_i = 1:file_count
 
     L = prune_labels(L);
     
-    [acc, F1, TP, FP, FN] = evaluate_segment(gt, L, 0.5);
+    [acc, F1, missed_seg, false_seg] = evaluate_segment(gt, L);
     accuracy = [accuracy, acc];
-    TP_seg = TP_seg + TP;
-    FP_seg = FP_seg + FP;
-    FN_seg = FN_seg + FN;
+    
+    performance.false_seg = performance.false_seg + false_seg;
+    performance.missed_seg = performance.missed_seg + missed_seg;
         
     %% Overlay labels on image 
     %imshow(em_im);
@@ -90,6 +98,12 @@ for file_i = 1:file_count
     imshow(text_em_im, []);
     imwrite(text_em_im, fullfile(output_dir, filename));
 end
+
+performance.accuracy = accuracy;
+performance.acc_above_zero = numel(accuracy(accuracy>0));
+performance.acc_above_thresh = numel(accuracy(accuracy>0.5));
+performance.mean_ji = mean(accuracy(accuracy>0));
+
 end
 
 function [L] = prune_labels(L)
@@ -128,8 +142,11 @@ function [Dc, dif] = data_cost(I)
     Dc(:,:,1) = ((numel(dif)*dif)./(sum(dif(:))*2));
     %Dc(:,:,1) = 
     %Dc(:,:,1) = (dif./(variance*2));  %TODO Fix the maths below, difficult to see what's going on
-    Dc(:,:,2) = 1-Dc(:,:,1);  
-    Dc(:,:,2) = (Dc(:,:,2).^.75)*2; %higher threshold to reduce false positives
+    maxDc = Dc(:,:,1);
+    maxDc = max(maxDc(:));
+    Dc(:,:,2) = 1-Dc(:,:,1)/maxDc;  
+    %Dc(:,:,2) = 1-Dc(:,:,1);  
+    %Dc(:,:,2) = (Dc(:,:,2).^.75)*2; %higher threshold to reduce false positives
 end
 
 function [Dc, dif] = data_cost_hist(I)
@@ -199,13 +216,22 @@ end
 function [hC vC] = GradientOrientation(I)
 %TODO 
 %This can probably be replaced with imgradient function for matlab ver >=2012b
-dy = conv2(fspecial('gauss', [5 5], sqrt(17)), fspecial('sobel'), 'valid');
+dy = conv2(fspecial('gauss', [5 5], sqrt(13)), fspecial('sobel'), 'valid');
 dx = dy';
 
 %abs because direction doesn't matter, just want to cost of finding boundaries 
 %where on gradient lines to be less than where there is low gradient
 vC = -abs(imfilter(I, dy, 'symmetric'));
 hC = -abs(imfilter(I, dx, 'symmetric'));
+
+%vC = -(abs(imfilter(I, dy, 'symmetric')).^2)/(2*var(I(:)));
+%hC = -(abs(imfilter(I, dx, 'symmetric')).^2)/(2*var(I(:)));
+
+%vC = min(ones(size(vC))*-0.005,vC);
+%hC = min(ones(size(vC))*-0.005,hC);
+
+%vC = 1-(vC/max(vC(:)));
+%hC = 1-(hC/max(hC(:)));
 
 %Use of an exponential function allows the gradients to be scaled
 %emphasising edges without raising the value of small gradients.  I.e.
@@ -216,5 +242,60 @@ hC = -abs(imfilter(I, dx, 'symmetric'));
 
 %vC = -step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,max(abs(vC(:)))]), vC);
 %hC = -step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,max(abs(hC(:)))]), hC);
+end
+
+function [SparseSmoothness] = sparseSmooth(I)
+    
+    I=im2double(I);
+    [h,w] = size(I);
+    I = I(:);
+    variance = var(I);
+
+    i = zeros(size(I));
+    j = zeros(size(I));
+    s = zeros(size(I));
+    
+    for k=1:numel(I)
+        try
+            i(k)=k;
+            j(k)=k-1;
+            s(k)=(abs(I(k)-I(k-1)).^2)./variance;
+        catch
+        end
+        try
+            i(k)=k;
+            j(k)=k+1;
+            s(k)=(abs(I(k)-I(k+1)).^2)./variance;
+        catch
+        end
+        
+        try
+            i(k)=k;
+            j(k)=k-w;
+            s(k)=(abs(I(k)-I(k-w)).^2)./variance;
+        catch
+        end
+        try
+            i(k)=k;
+            j(k)=k+w;
+            s(k)=(abs(I(k)-I(k+1)).^2)./variance;
+        catch
+        end
+
+    end
+    k
+    SparseSmoothness = sparse(i,j,exp(-s*250));  
+    SparseSmoothness=SparseSmoothness(:,1:numel(I));
+    %SparseSmoothness = sparse(SparseSmoothness);
+    %{
+    #####
+    #####
+    #####
+    #####
+    #####
+    
+    ##### ##### ##### ##### #####
+    %}
+    
 end
 

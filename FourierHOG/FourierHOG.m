@@ -24,7 +24,7 @@ end
 complex_g = padarray(complex_g,[padSize,padSize]);
 %% project to fourier space
 [m,n] = size(complex_g);
-order = [0 1 2 ];%3 4];  % only contrast-insensitive? and postive frequncies
+order = [0 1 2 3];% 4];  % only contrast-insensitive? and postive frequncies
 f_g = zeros([m,n,numel(order)]);
 phase_g = angle(complex_g);     %conversion to polar-coords of gradient image
 mag_g = abs(complex_g);

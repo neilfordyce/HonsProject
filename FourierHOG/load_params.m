@@ -3,9 +3,9 @@ param.featureScale = 6; %TODO Increase feature scale with image resize
 
 param.sample_count = 30;	%Number of images to use
 
-param.neg_sample_count = 3000;  %Per image
+param.neg_sample_count = 300;  %Per image
 
-param.pos_sample_multiplier = 50000;  %TODO Since the change in GT this shouldn't be so high
+param.pos_sample_multiplier = 5000;  %TODO Since the change in GT this shouldn't be so high
 
 param.scale           = 0.2;         %Need to subsample the images because the 
                                       %electron micrographs are huge

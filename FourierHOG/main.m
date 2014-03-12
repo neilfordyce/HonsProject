@@ -157,7 +157,7 @@ for ifold = 1:5
     % results are accumulated in the cross-validation process
 end
 %% evaluate 
-[data.dist, data.performance_score] = evaluate_quantative( data );
+[data.dist, data.performance_score, data.misclassification_rate, data.f1] = evaluate_quantative( data );
 %Store performance data
 evaluation_data.dist = data.dist; evaluation_data.performance_score=data.performance_score;
 save([Y_hat_dir, '\evaluation_data'], 'evaluation_data');

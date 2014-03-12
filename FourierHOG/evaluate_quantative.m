@@ -1,6 +1,6 @@
 %%AUTHOR Neil Fordyce
 %%DATE   07/02/14
-function [ dist, area_score ] = evaluate_quantative( data )
+function [ dist, area_score, misclassification_rate, f1 ] = evaluate_quantative( data )
 %EVALUATE_QUANTATIVE produces normalised histograms of frequncy of SVM
 %score at pos, neg and ambiguous in three separate histograms.
 %Also computes the area trapped between pos and neg histograms to give a
@@ -23,7 +23,23 @@ end
 [dist.amb_hist, dist.amb_cen] = norm_hist(ambiguous, BINS);
 [dist.neg_hist, dist.neg_cen] = norm_hist(neg_golgi, BINS);
 
-area_score = area(dist.pos_hist, dist.pos_cen, dist.neg_hist, dist.neg_cen);
+[area_score,optimal_thresh] = area(dist.pos_hist, dist.pos_cen, dist.neg_hist, dist.neg_cen);
+
+misclassified = 0;
+FN = 0;
+FP = 0;
+TP = 0;
+total_classified = 0;
+
+for i=1:numel(data.score)
+    TP = TP + sum(sum(data.score{i} >= optimal_thresh & data.mask{i} == 2)); %pos above thresh
+    FN = FN + sum(sum(data.score{i} < optimal_thresh & data.mask{i} == 2)); %pos below thresh
+    FP = FP + sum(sum(data.score{i} >= optimal_thresh & data.mask{i} == 0)); %neg above thresh 
+    total_classified = total_classified + numel(data.score{i});
+end
+
+F1 = (2*TP)/((2*TP)+FP+FN);
+misclassification_rate = misclassified/total_classified;
 
 end
 
@@ -33,7 +49,7 @@ function [outhist, cen] = norm_hist(image, bins)
     outhist = outhist ./ sum(outhist);
 end
 
-function [area_score] = area(pos_hist, pos_cen, neg_hist, neg_cen)
+function [area_score, optimal_thresh] = area(pos_hist, pos_cen, neg_hist, neg_cen)
 %Finds the area trapped between pos and neg histograms - minimize to
 %optomize the detector performance 
 
@@ -60,6 +76,7 @@ for i=pos_cen(1):step_size:neg_cen(end)
     %Intersection occurs if the difference between the two freqs changes
     %sign from the last iteration, or if they are equal
     if freq_diff * last_freq_diff <= 0
+        optimal_thresh = i;
         pos_intercept = pos_thresh;
         neg_intercept = neg_thresh;
     end

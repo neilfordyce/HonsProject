@@ -1,7 +1,5 @@
 function output_mask = slic_segment(svm_I, em_I)
 
-svm_I = imread(svm_I);
-em_I = imread(em_I);
 em_I = rgb2gray(em_I);
 em_I = imresize(em_I, 0.2);
 svm_I = im2double(svm_I);

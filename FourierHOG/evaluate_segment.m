@@ -1,14 +1,17 @@
-function [ accuracy, F1 TP_seg, FP_seg, FN_seg ] = evaluate_segment( gt, seg, thresh )
+function [ accuracy, F1, missed_seg, false_seg ] = evaluate_segment( gt, seg )
 %Evaluates the quality of a segmentation
 
-%gt and seg are binary images
-%so in eval_image, we have; 0=TN, 1=FN, 2=FP, 3=TP
-TP_seg=0; FP_seg=0; FN_seg=0;
-eval_image = im2bw(gt, 0) + (2*seg);
+%gt 0=neg, 1=ambiguous, 2=pos
+%seg is a binary image
+%so in eval_image, we have; 0=TN, 2=FN, 3=FP, 5=TP, 1=4=N/A
+missed_seg=0; false_seg=0;
+gt=double(gt);
+%seg(gt==1) = 0;
+eval_image = gt + (3*seg);
 
-FN = numel(eval_image(eval_image==1));
-FP = numel(eval_image(eval_image==2));
-TP = numel(eval_image(eval_image==3));
+FN = numel(eval_image(eval_image==2));
+FP = numel(eval_image(eval_image==3));
+TP = numel(eval_image(eval_image==5));
 F1 = (2*TP) / ((2*TP)+FP+FN);
 
 %Now evalate each of the segmentations seperately
@@ -16,20 +19,32 @@ CC = bwconncomp(eval_image);
 PixelIdxList = CC.PixelIdxList;
 for i=1:numel(PixelIdxList)    
     eval_image_connected_comp = eval_image(PixelIdxList{i});
+   
+  %  if any(ismember([4 1], eval_image_connected_comp))
+   %     continue;
+   % end
+    
     %TN = numel(eval_image(eval_image==0));
-    FN = numel(eval_image_connected_comp(eval_image_connected_comp==1));
-    FP = numel(eval_image_connected_comp(eval_image_connected_comp==2));
-    TP = numel(eval_image_connected_comp(eval_image_connected_comp==3));
+    FN = numel(eval_image_connected_comp(eval_image_connected_comp==2));
+    FP = numel(eval_image_connected_comp(eval_image_connected_comp==3));
+    TP = numel(eval_image_connected_comp(eval_image_connected_comp==5));
     accuracy(i) = TP / (TP+FP+FN);
     
-    if accuracy(i) < thresh
-        if FP > FN
-            FP_seg = FP_seg + 1;
-        else
-            FN_seg = FN_seg + 1;
+    if isnan(accuracy(i)) %numel(eval_image_connected_comp(eval_image_connected_comp==1)) > 0 | numel(eval_image_connected_comp(eval_image_connected_comp==4)) > 0
+        continue;   %Don't count missed ambiguous regions
+    end
+    
+    %Count false detections and missed detections, if any
+    if accuracy(i) == 0
+        if any(ismember([0,4], eval_image_connected_comp))
+            continue;   %Don't count missed ambiguous regions
         end
-    else
-        TP_seg = TP_seg + 1;
+        
+        if FN > 0
+            missed_seg = missed_seg + 1;
+        elseif FP > 0
+            false_seg = false_seg + 1;        
+        end
     end
 end
 
