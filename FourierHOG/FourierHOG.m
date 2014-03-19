@@ -9,24 +9,15 @@ global chKERNEL triKERNEL triKERNEL2
 [om,on,~] = size(I);
 padSize = (binSize*5);
 %% get gradient
-if(size(I,3) == 3)
-    [DX,DY,~] = gradient(I);
-    mag = DX .^ 2 + DY .^ 2;
-    [~,channel] = max(mag,[],3);
-    dx = DX(:,:, 1) .* (channel == 1) + DX(:,:, 2) .* (channel == 2) + DX(:,:, 3) .* (channel == 3);
-    dy = DY(:,:, 1) .* (channel == 1) + DY(:,:, 2) .* (channel == 2) + DY(:,:, 3) .* (channel == 3);
-    complex_g = complex(dx,dy);
-else
-    [dx,dy] = gradient(I);
-    complex_g = complex(dx,dy);
-end
+[dx,dy] = gradient(I);
+complex_g = complex(dx,dy);%conversion to polar-coords of gradient image
 
 complex_g = padarray(complex_g,[padSize,padSize]);
 %% project to fourier space
 [m,n] = size(complex_g);
 order = [0 1 2 3];% 4];  % only contrast-insensitive? and postive frequncies
 f_g = zeros([m,n,numel(order)]);
-phase_g = angle(complex_g);     %conversion to polar-coords of gradient image
+phase_g = angle(complex_g);
 mag_g = abs(complex_g);
 
 % local gradient magnitude normalization, scale = sigma * 2
