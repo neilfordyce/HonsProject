@@ -1,5 +1,5 @@
 % Author Neil Fordyce
-function [performance]=segment()
+function [performance]=segment()%data)
 
 %TODO parameterise seg file as well
 load_params;
@@ -8,7 +8,7 @@ accuracy = [];
 
 gt_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\output\gt_masks_2';
 em_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\';
-prob_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73565931169\';
+prob_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73567484656\';
 output_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\segment\';
 prob_files = dir([prob_dir, '*jpg']);
 
@@ -20,31 +20,32 @@ for file_i = 1:file_count
     % read the SVM image, electron micrograph image and ground truth for evaluation
     filename = prob_files(file_i).name;
     im = imread(fullfile(prob_dir, filename));
+    %im = data.score{file_i};
     em_im = imread(fullfile(em_dir, filename));
 
     %im = slic_segment(im, em_im);
-    im = guard(im);
+
     im = im2double(im);
 
     em_im = rgb2gray(em_im);
     em_im = imresize(em_im, 0.2);
     %em_im = im2double(em_im);
-    em_im = guard(em_im);
+
     
     gt = read_mask( fullfile(gt_dir, filename), param.scale);
-    gt = guard(gt);
+
 
     %[Dc, dif]=data_cost_hist(im);
-    [Dc, dif]=data_cost(im);
+    [cost, dif]=data_cost(im);
     %[Dc, dif]=data_cost_kmeans(im);
 
     % smoothness term: 
     % constant part
-    Sc = [0 1;
+    smoothing_cost = [0 1;
           1 0];
-    Sc = single(Sc);
+    smoothing_cost = single(smoothing_cost);
     % spatialy varying part
-    [Hc Vc] = GradientOrientation(im2double(em_im));
+    [h_cost v_cost] = GradientOrientation(im2double(em_im));
 
 %    sparseSc = sparseSmooth(em_im);
     
@@ -56,7 +57,7 @@ for file_i = 1:file_count
     %GraphCut('open', DataCost, SmoothnessCost, vC, hC);
     %gch = GraphCut('open', Dc, 30*Sc, exp(-Vc*5), exp(-Hc*5));
     %gch = GraphCut('open', Dc*100, 150*Sc, tanh(Vc*0.5), tanh(Hc*0.5)); %data_cost(im)
-    gch = GraphCut('open', Dc, 150*Sc, exp(Vc*250), exp(Hc*250)); %data_cost(im)
+    gch = GraphCut('open', cost, 150*smoothing_cost, exp(v_cost*250), exp(h_cost*250)); %data_cost(im)
     %gch = GraphCut('open', Dc, 2*Sc, exp(-Vc*50), exp(-Hc*50)); %data_cost_hist(im)
     %gch = GraphCut('open', Dc, 50*Sc, exp(-Vc*5), exp(-Hc*5)); %data_cost_kmeans(im)
     %gch = GraphCut('open', Dc, 150*Sc);
@@ -69,6 +70,10 @@ for file_i = 1:file_count
 	%L = GCMEX(zeros(size(im(:))), [Dc1(:);Dc2(:)], PAIRWISE, Sc,1);
 
     L = prune_labels(L);
+    
+    L=guard(L);
+    gt=guard(gt);
+    em_im=guard(em_im);
     
     [acc, F1, missed_seg, false_seg] = evaluate_segment(gt, L);
     accuracy = [accuracy, acc];
@@ -119,7 +124,7 @@ function [L] = prune_labels(L)
     
     %Threshold the areas
     TotalImageArea = CC.ImageSize(1) * CC.ImageSize(2);
-    AreaThresh = TotalImageArea * 0.006;  % Threshold anything below 0.6% of the total image size
+    AreaThresh = TotalImageArea * 0.01;  % Threshold anything below 0.6% of the total image size
     PixelIdxList = CC.PixelIdxList;
     PixelIdxList = PixelIdxList(Area > AreaThresh);
     
@@ -132,6 +137,7 @@ end
 
 function [Dc, dif] = data_cost(I)
     %level = graythresh(I);
+    %TODO remove thresh?
     mean_I = mean(I(:));
     I(I<mean_I) = mean_I;
     dif = (I - mean_I).^2;
@@ -223,6 +229,9 @@ dx = dy';
 %where on gradient lines to be less than where there is low gradient
 vC = -abs(imfilter(I, dy, 'symmetric'));
 hC = -abs(imfilter(I, dx, 'symmetric'));
+
+%vC = vC/(2*var(I(:)));
+%hC = hC/(2*var(I(:)));
 
 %vC = -(abs(imfilter(I, dy, 'symmetric')).^2)/(2*var(I(:)));
 %hC = -(abs(imfilter(I, dx, 'symmetric')).^2)/(2*var(I(:)));

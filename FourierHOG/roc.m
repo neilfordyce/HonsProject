@@ -1,6 +1,6 @@
 %%AUTHOR Neil Fordyce
 %%DATE   10/02/14
-function roc( data )
+function [plot_handle] = roc( data, linespec )
 %ROC Produces RoC curve for data
 step_size = -0.01;
 neg_cen = data.dist.neg_cen;
@@ -30,8 +30,7 @@ for i=max_bin:step_size:min_bin
 end
 
 %Plot the RoC curve
-figure
-plot(fp, tp)  %histograms are already normalised so no need for fp/fp+tp
+plot_handle=plot(fp, tp, linespec);  %histograms are already normalised so no need for fp/fp+tp
 axis tight
 xlabel('FP Rate')
 ylabel('TP Rate')

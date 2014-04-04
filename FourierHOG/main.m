@@ -2,33 +2,34 @@
 %% Try the code on a computing server.
 % It will compue and store the feautres pixel-wisely for 30 792 * 636 pixel
 % images, so it requires 30g memory to run.
-clearvars
-close all
-dbstop if error
+if not(exist('batch_run','var'))
+    %Clear the vars unless batch mode indicated
+    clearvars
+    close all
+    dbstop if error 
+end
 
-%TODO vary the size of bbRadius
-%TODO store params in model for future reference
-% parameters
-load_params  %training params
+if not(exist('param','var'))
+    load_params  %training params
+end
+
+if not(exist('output_dir','var'))
+    output_dir = '';
+end
 
 initrand();
 
-% requires export_fig from http://www.mathworks.com/matlabcentral/fileexchange/23629-exportfig
-addpath('/home/liu/Matlab/export_fig');
-% requires liblinear
-addpath(genpath('/home/liu/Matlab/liblinear-1.8'));
-
-% requires the TAS package (and image data) from http://ai.stanford.edu/~gaheitz/Research/TAS/
-% download and unfold it into the current path
-% then add the path to the TAS package
-addpath(genpath('/home/liu/Dropbox/doc/IJCV/code/FourierHOG/TAS'));
-
 %% load data
-data = load_data('C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images', 1:param.sample_count);
+data = load_data('C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images', param.gt_mask_dir,  1:param.sample_count);
 rands = randperm(length(data.image_filename));
 
+%Add roc plot legend text if it is there
+if exist('legend_text','var')
+   data.legend_text = legend_text; 
+end
+
 %Make dir to output certainty images
-Y_hat_dir = fullfile('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs', ['FourierHOG_Prob', num2str(round(now*100000))]);
+Y_hat_dir = fullfile('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs', output_dir, ['FourierHOG_Prob', num2str(round(now*100000))]);
 mkdir(Y_hat_dir);
 
 feature_dir = 'C:\Users\Neil\golgi_fourier_features_gt2';
@@ -44,7 +45,7 @@ end
 %% computing features
 N = numel(Image);
 F = cell(1, N);
-prepareKernel(param.featureScale, 4, 0);
+prepareKernel(param.featureScale, param.maxOrder, 0);
 pause(0.1);
 for i = 1:length(data.image_filename)
     feature_file = fullfile(feature_dir, sprintf('F%d.mat', i));
@@ -52,7 +53,7 @@ for i = 1:length(data.image_filename)
     if exist(feature_file) ~= 2
         disp(['extracting features from image' num2str(i)]);
         tic
-        F = FourierHOG(Image{i},param.featureScale);
+        F = FourierHOG(Image{i}, param.featureScale, 0:param.maxOrder);
         save(feature_file, 'F');
         toc;
     end
@@ -76,8 +77,11 @@ for ifold = 1:5
     for i = trainIndex
         F = read_feature(feature_dir, i);
 
-        %% downsampling
-        %number of pos samples is defined by the number available to take
+        for j=1 : size(F, 2)
+            F(:,j) = step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,1]), F(:,j));
+        end
+        
+        %% random sampling 
         total_pixels = numel(data.mask{i}(:));
         pos_pixels = numel(data.mask{i}(data.mask{i}==2));
         pos_sample_count = round((pos_pixels / total_pixels) * param.pos_sample_multiplier)
@@ -101,7 +105,7 @@ for ifold = 1:5
     trainX = sparse(bsxfun(@times, [Pos1;Neg1], 1./ ABSMAX ));
     
     model = train([ones(size(Pos1,1),1); ones(size(Neg1,1),1) * 0], trainX, '-B 1 -c 1');
-    
+    %model = svmtrain(trainX, [ones(size(Pos1,1),1); ones(size(Neg1,1),1) * 0]);
     model.w(1:end-1) = model.w(1:end-1) ./ ABSMAX;
     toc
     %% hard sample mining and retrain
@@ -113,6 +117,10 @@ for ifold = 1:5
             continue;
         end
         F = read_feature(feature_dir, i);
+        
+        for j=1 : size(F, 2)
+            F(:,j) = step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,1]), F(:,j));
+        end
 
         %% detection
         votes =  F * model.w(1:end-1)' + model.w(end);
@@ -131,6 +139,7 @@ for ifold = 1:5
     size(trainX)
     model = train([ones(size(Pos1,1),1); zeros(size(HardNegM,1),1) ], trainX, '-B 1 -c 1');
     model.w(1:end-1) = model.w(1:end-1) ./ ABSMAX;
+    %model = svmtrain(trainX, [ones(size(Pos1,1),1); ones(size(Neg1,1),1) * 0]);
     %model_class = classRF_train(trainX,[ones(size(Pos1,1),1); zeros(size(HardNegM,1),1) ]); 
     save('model.mat', 'model');
     toc
@@ -143,23 +152,36 @@ for ifold = 1:5
             continue;
         end
         F = read_feature(feature_dir, i);
+        
+        for j=1 : size(F, 2)
+            F(:,j) = step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,1]), F(:,j));
+        end
+        
         votes = F * model.w(1:end-1)' + model.w(end);
         Y_hat = reshape(votes, [size(Image{1}, 1), size(Image{1}, 2)]);
         %Y_hat = classRF_predict(F,model_class);
         %Y_hat = reshape(Y_hat, size(Image{1}));
         %Y_hat = 
-        
-        scale_Y_hat = step(vision.ContrastAdjuster, Y_hat); %Contrast scale the certainties image
-        imwrite(scale_Y_hat, fullfile(Y_hat_dir, [data.name{i} '.jpg'])); %Store the certainty image
-
         data.score{i} = Y_hat;
     end
     % results are accumulated in the cross-validation process
 end
+
+%%Output visulisations
+for i = 1:length(data.image_filename)
+    Y_hat = data.score{i};
+    scale_Y_hat = step(vision.ContrastAdjuster, data.score{i}); %Contrast scale the certainties image
+    imwrite(scale_Y_hat, fullfile(Y_hat_dir, [data.name{i} '.jpg'])); %Store the certainty image
+end
+
 %% evaluate 
 [data.dist, data.performance_score, data.misclassification_rate, data.f1] = evaluate_quantative( data );
 %Store performance data
 evaluation_data.dist = data.dist; evaluation_data.performance_score=data.performance_score;
 save([Y_hat_dir, '\evaluation_data'], 'evaluation_data');
+save([Y_hat_dir, '\data'], 'data');
 save([Y_hat_dir, '\param'], 'param');
 plot_evaluation(data);
+
+%% remove feature files
+delete([feature_dir, '\*']);

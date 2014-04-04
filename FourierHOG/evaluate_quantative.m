@@ -25,21 +25,23 @@ end
 
 [area_score,optimal_thresh] = area(dist.pos_hist, dist.pos_cen, dist.neg_hist, dist.neg_cen);
 
-misclassified = 0;
 FN = 0;
 FP = 0;
 TP = 0;
+TN = 0;
 total_classified = 0;
 
 for i=1:numel(data.score)
     TP = TP + sum(sum(data.score{i} >= optimal_thresh & data.mask{i} == 2)); %pos above thresh
     FN = FN + sum(sum(data.score{i} < optimal_thresh & data.mask{i} == 2)); %pos below thresh
     FP = FP + sum(sum(data.score{i} >= optimal_thresh & data.mask{i} == 0)); %neg above thresh 
+    TN = TN + sum(sum(data.score{i} < optimal_thresh & data.mask{i} == 0)); %neg above thresh 
     total_classified = total_classified + numel(data.score{i});
 end
 
-F1 = (2*TP)/((2*TP)+FP+FN);
-misclassification_rate = misclassified/total_classified;
+B=1;
+f1 = ((1+B^2)*TP)/(((1+B^2)*TP)+((B^2)*FN)+FP);
+misclassification_rate = (FN+FP)/total_classified;
 
 end
 

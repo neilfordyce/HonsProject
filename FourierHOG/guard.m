@@ -1,3 +1,4 @@
+%AUTHOR Neil Fordyce
 function [ I ] = guard( I )
 %% Crops the image to remove edge regions with detections affected by padding
 

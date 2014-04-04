@@ -1,4 +1,4 @@
-function [Feature, Fdetail] = FourierHOG(I,binSize,maxIndex)
+function [Feature, Fdetail] = FourierHOG(I, binSize, order)
 
 if ~exist('binSize', 'var') || isempty(binSize),
     binSize = 6;
@@ -15,7 +15,7 @@ complex_g = complex(dx,dy);%conversion to polar-coords of gradient image
 complex_g = padarray(complex_g,[padSize,padSize]);
 %% project to fourier space
 [m,n] = size(complex_g);
-order = [0 1 2 3];% 4];  % only contrast-insensitive? and postive frequncies
+%order = [0 1 2 3];% 4];  % only contrast-insensitive? and postive frequncies
 f_g = zeros([m,n,numel(order)]);
 phase_g = angle(complex_g);
 mag_g = abs(complex_g);
@@ -25,7 +25,7 @@ local_mag_g = sqrt(conv2(mag_g.^2, triKERNEL2, 'same'));
 mag_g = mag_g ./ (local_mag_g + 0.001);
 
 for j = 1:numel(order)
-    f_g(:,:,j) = exp( -1i * (order(j)) * phase_g) .* mag_g;
+    f_g(:,:,j) = exp( -1i * (order(j)) * phase_g) .* sqrt(mag_g);  %root of mag_g is better here
 end
 f_g(:,:,1) = f_g(:,:,1) * 0.5;
 
@@ -40,8 +40,8 @@ for j = 1:numel(order)
 end
 
 % frequncy control
-maxFreq = 4;
-maxFreqSum = 4;
+maxFreq = order(end);
+maxFreqSum = order(end);
 
 % count output feature channels
 nScale = size(chKERNEL,1);

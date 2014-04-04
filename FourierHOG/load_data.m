@@ -1,8 +1,8 @@
-function [ins] = load_data(data_dir, image_indices)
+function [ins] = load_data(data_dir, gt_mask_dir, image_indices)
 
 % Directories
 imagedir   = [data_dir, '/golgi'];
-gt_dir     = [data_dir, '/output/gt_masks_2'];
+gt_dir     = [data_dir, gt_mask_dir];
 
 % Files
 D = dir([imagedir, '/*jpg']);
