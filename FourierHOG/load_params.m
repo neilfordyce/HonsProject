@@ -10,7 +10,7 @@ param.pos_sample_multiplier = 5000;
 param.scale           = 0.2;         %Need to subsample the images because the 
                                       %electron micrographs are huge
                                       
-param.maxOrder = 4;
+param.maxOrder = 2;
 
 param.gt_mask_dir = '/output/gt_masks_2';
 									  

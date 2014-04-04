@@ -1,18 +1,21 @@
+%%AUTHOR Neil Fordyce
+%Basic setup, load params, loop to change a param, call 'main'
+%Set legend text for output to roc curve later
+%Make a separate output directory for each batch run, and set output_dir to
+%it
 %Make dir to output certainty images
 clearvars
 close all
 dbstop if error
 
-legend_text = 'm=0'
-
-for order=1:1
+for scale=[4, 6, 8, 10]
     batch_run = 1;
     
-    output_dir = 'variable_order';
+    output_dir = 'variable_scale';
     load_params
     
-    param.maxOrder = order;
-    legend_text = [legend_text, ',', num2str(order)];
+    param.featureScale = scale;
+    legend_text = ['scale=', num2str(order)];
     
     main    
 end
