@@ -54,7 +54,7 @@ for i = 1:length(data.image_filename)
         disp(['extracting features from image' num2str(i)]);
         tic
         F = FourierHOG(Image{i}, param.featureScale, 0:param.maxOrder);
-        save(feature_file, 'F');
+        save(feature_file, 'F', '-v7.3');
         toc;
     end
 end
@@ -84,7 +84,7 @@ for ifold = 1:5
         %% random sampling 
         total_pixels = numel(data.mask{i}(:));
         pos_pixels = numel(data.mask{i}(data.mask{i}==2));
-        pos_sample_count = round((pos_pixels / total_pixels) * param.pos_sample_multiplier)
+        pos_sample_count = round((pos_pixels / total_pixels) * param.pos_sample_multiplier);
         
         index1 = find(data.mask{i}(:) == 2);
         index2 = randsample(numel(index1), pos_sample_count);   % draw positive samples from image

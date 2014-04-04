@@ -3,9 +3,9 @@ clearvars
 close all
 dbstop if error
 
-legend_text = 'm=0,1,2'
+legend_text = 'm=0'
 
-for order=3:6
+for order=1:1
     batch_run = 1;
     
     output_dir = 'variable_order';
