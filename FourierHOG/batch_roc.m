@@ -4,7 +4,7 @@ function batch_roc( data_dir, figure_name)
 %   Detailed explanation goes here
 dirs = dir(data_dir);
 
-linespec = {'-k^', '-b.', '-g^', '-r.'};
+linespec = {'-k', '-b', '-g', '-r.', '-b*', '-*r'};
 
 figure;
 hold on

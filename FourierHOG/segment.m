@@ -1,15 +1,28 @@
 % Author Neil Fordyce
-function [performance]=segment()%data)
-
-%TODO parameterise seg file as well
+function [performance]=segment(seg_param, x_label, batch_variable)%data)
 load_params;
+
+if not(exist('seg_param','var'))
+    load_seg_params     %seg params
+end
+
+if not(exist('batch_variable','var'))
+    batch_variable = '';
+end
+    
+
 performance = {};  performance.false_seg = 0; performance.missed_seg = 0;
+if exist('x_label', 'var')
+   performance.x_label = x_label; 
+end
+
 accuracy = [];
 
 gt_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\output\gt_masks_2';
 em_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\annotated_images\golgi\';
-prob_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\FourierHOG_Prob73567484656\';
-output_dir = 'C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\segment\';
+prob_dir = seg_param.svm_scores;
+output_dir = fullfile('C:\Users\Neil\SkyDrive\University\HonoursProject\img\outputs\segment', batch_variable, ['segment', num2str(round(now*100000))]);
+mkdir(output_dir);
 prob_files = dir([prob_dir, '*jpg']);
 
 file_count = length(prob_files);
@@ -28,46 +41,46 @@ for file_i = 1:file_count
     im = im2double(im);
 
     em_im = rgb2gray(em_im);
-    em_im = imresize(em_im, 0.2);
+    em_im = imresize(em_im, param.scale);
     %em_im = im2double(em_im);
 
     
     gt = read_mask( fullfile(gt_dir, filename), param.scale);
 
 
-    %[Dc, dif]=data_cost_hist(im);
+    %[cost, dif]=data_cost_hist(im);
     [cost, dif]=data_cost(im);
-    %[Dc, dif]=data_cost_kmeans(im);
+    %[cost, dif]=data_cost_kmeans(im);
 
-    % smoothness term: 
-    % constant part
+    % smoothness costs
+    % static part
     smoothing_cost = [0 1;
-          1 0];
+                      1 0];
     smoothing_cost = single(smoothing_cost);
     % spatialy varying part
-    [h_cost v_cost] = GradientOrientation(im2double(em_im));
+    [h_cost v_cost] = gradient_orientation(im2double(em_im), seg_param.gradient_smoothing_sigma, seg_param.diff_kernel);
 
 %    sparseSc = sparseSmooth(em_im);
     
-%    Dc1 = Dc(:, :, 1);
-%    Dc2 = Dc(:, :, 2);
-%    Dc = [Dc1(:) Dc2(:)]';
+%    cost1 = cost(:, :, 1);
+%    cost2 = cost(:, :, 2);
+%    cost = [cost1(:) cost2(:)]';
     
-    %cut the graph
+    %Approx energy minimisation
     %GraphCut('open', DataCost, SmoothnessCost, vC, hC);
-    %gch = GraphCut('open', Dc, 30*Sc, exp(-Vc*5), exp(-Hc*5));
-    %gch = GraphCut('open', Dc*100, 150*Sc, tanh(Vc*0.5), tanh(Hc*0.5)); %data_cost(im)
-    gch = GraphCut('open', cost, 150*smoothing_cost, exp(v_cost*250), exp(h_cost*250)); %data_cost(im)
-    %gch = GraphCut('open', Dc, 2*Sc, exp(-Vc*50), exp(-Hc*50)); %data_cost_hist(im)
-    %gch = GraphCut('open', Dc, 50*Sc, exp(-Vc*5), exp(-Hc*5)); %data_cost_kmeans(im)
-    %gch = GraphCut('open', Dc, 150*Sc);
+    %gch = GraphCut('open', cost, 30*Sc, exp(-Vc*5), exp(-Hc*5));
+    %gch = GraphCut('open', cost*100, 150*Sc, tanh(Vc*0.5), tanh(Hc*0.5)); %data_cost(im)
+    gch = GraphCut('open', cost, seg_param.lambda*smoothing_cost, exp(v_cost*250), exp(h_cost*250)); %data_cost(im)
+    %gch = GraphCut('open', cost, 2*Sc, exp(-Vc*50), exp(-Hc*50)); %data_cost_hist(im)
+    %gch = GraphCut('open', cost, 50*Sc, exp(-Vc*5), exp(-Hc*5)); %data_cost_kmeans(im)
+    %gch = GraphCut('open', cost, 150*Sc);
     [gch L] = GraphCut('expand',gch, 5);
     gch = GraphCut('close', gch);
 	
-	%Dc1 = Dc(:,:,1);
-	%Dc2 = Dc(:,:,2);
+	%cost1 = cost(:,:,1);
+	%cost2 = cost(:,:,2);
 	%HcVc = Hc+Vc;
-	%L = GCMEX(zeros(size(im(:))), [Dc1(:);Dc2(:)], PAIRWISE, Sc,1);
+	%L = GCMEX(zeros(size(im(:))), [cost1(:);cost2(:)], PAIRWISE, Sc,1);
 
     L = prune_labels(L);
     
@@ -75,7 +88,7 @@ for file_i = 1:file_count
     gt=guard(gt);
     em_im=guard(em_im);
     
-    [acc, F1, missed_seg, false_seg] = evaluate_segment(gt, L);
+    [acc, ~, missed_seg, false_seg] = evaluate_segment(gt, L);
     accuracy = [accuracy, acc];
     
     performance.false_seg = performance.false_seg + false_seg;
@@ -84,7 +97,7 @@ for file_i = 1:file_count
     %% Overlay labels on image 
     %imshow(em_im);
     %hold on;
-    ih = PlotLabels(L);
+    ih = show_labels(L);
     em_im = repmat(em_im, [1, 1, 3]);
     em_im(ih>0)=ih(ih>0);
     
@@ -108,6 +121,10 @@ performance.accuracy = accuracy;
 performance.acc_above_zero = numel(accuracy(accuracy>0));
 performance.acc_above_thresh = numel(accuracy(accuracy>0.5));
 performance.mean_ji = mean(accuracy(accuracy>0));
+
+save([output_dir, '\performance'], 'performance');
+save([output_dir, '\seg_param'], 'seg_param');
+
 
 end
 
@@ -135,7 +152,7 @@ function [L] = prune_labels(L)
     end
 end
 
-function [Dc, dif] = data_cost(I)
+function [cost, dif] = data_cost(I)
     %level = graythresh(I);
     %TODO remove thresh?
     mean_I = mean(I(:));
@@ -145,17 +162,17 @@ function [Dc, dif] = data_cost(I)
 
     %dif = (dif-min(dif(:))) ./ (max(dif(:)-min(dif(:))));
 
-    Dc(:,:,1) = ((numel(dif)*dif)./(sum(dif(:))*2));
-    %Dc(:,:,1) = 
-    %Dc(:,:,1) = (dif./(variance*2));  %TODO Fix the maths below, difficult to see what's going on
-    maxDc = Dc(:,:,1);
-    maxDc = max(maxDc(:));
-    Dc(:,:,2) = 1-Dc(:,:,1)/maxDc;  
-    %Dc(:,:,2) = 1-Dc(:,:,1);  
-    %Dc(:,:,2) = (Dc(:,:,2).^.75)*2; %higher threshold to reduce false positives
+    cost(:,:,1) = ((numel(dif)*dif)./(sum(dif(:))*2));
+    %cost(:,:,1) = 
+    %cost(:,:,1) = (dif./(variance*2));  %TODO Fix the maths below, difficult to see what's going on
+    maxcost = cost(:,:,1);
+    maxcost = max(maxcost(:));
+    cost(:,:,2) = 1-cost(:,:,1)/maxcost;  %Opposite cost to go to other labelling
+    %cost(:,:,2) = 1-cost(:,:,1);  
+    %cost(:,:,2) = (cost(:,:,2).^.75)*2; %higher threshold to reduce false positives
 end
 
-function [Dc, dif] = data_cost_hist(I)
+function [cost, dif] = data_cost_hist(I)
     dif = I;
     
     mean_I = mean(I(:));
@@ -174,11 +191,11 @@ function [Dc, dif] = data_cost_hist(I)
     dif = sum(dif, 3);
     dif = (dif-min(dif(:))) ./ (max(dif(:)-min(dif(:))));
 
-    Dc(:,:,1) = (dif.*2).^2;
-    Dc(:,:,2) = 1-Dc(:,:,1); 
+    cost(:,:,1) = (dif.*2).^2;
+    cost(:,:,2) = 1-cost(:,:,1); 
 end
 
-function [Dc, dif] = data_cost_kmeans(I)
+function [cost, dif] = data_cost_kmeans(I)
    k = 2; %number of regions
 
     %Apply kmeans to cluster the image into k regions
@@ -196,13 +213,13 @@ function [Dc, dif] = data_cost_kmeans(I)
 
         % data cost is minus log likelihood of the pixel to belong to each
         % cluster according to its intensity value
-        Dc(:,:,cluster_i) = (dif*icv).*dif./2;
+        cost(:,:,cluster_i) = (dif*icv).*dif./2;
     end
     %}
     %data = im; 
 end
 
-function LL = PlotLabels(L)
+function LL = show_labels(L)
 
 L = single(L);
 
@@ -219,13 +236,13 @@ ih = imagesc(LL);
 set(ih,'AlphaData',Am);
 end
 
-function [hC vC] = GradientOrientation(I)
+function [hC vC] = gradient_orientation(I, sigma, diff_kernel)
 %TODO 
 %This can probably be replaced with imgradient function for matlab ver >=2012b
-dy = conv2(fspecial('gauss', [5 5], sqrt(13)), fspecial('sobel'), 'valid');
+dy = conv2(fspecial('gauss', [5 5], sigma), diff_kernel, 'valid');
 dx = dy';
 
-%abs because direction doesn't matter, just want to cost of finding boundaries 
+%abs because direction doesn't matter, just want the cost of crossing boundaries 
 %where on gradient lines to be less than where there is low gradient
 vC = -abs(imfilter(I, dy, 'symmetric'));
 hC = -abs(imfilter(I, dx, 'symmetric'));
@@ -295,16 +312,6 @@ function [SparseSmoothness] = sparseSmooth(I)
     k
     SparseSmoothness = sparse(i,j,exp(-s*250));  
     SparseSmoothness=SparseSmoothness(:,1:numel(I));
-    %SparseSmoothness = sparse(SparseSmoothness);
-    %{
-    #####
-    #####
-    #####
-    #####
-    #####
-    
-    ##### ##### ##### ##### #####
-    %}
-    
+    %SparseSmoothness = sparse(SparseSmoothness);    
 end
 

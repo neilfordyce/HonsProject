@@ -8,14 +8,14 @@ clearvars
 close all
 dbstop if error
 
-for scale=[4, 6, 8, 10]
+for scale=[14, 16]
     batch_run = 1;
     
     output_dir = 'variable_scale';
     load_params
     
     param.featureScale = scale;
-    legend_text = ['scale=', num2str(order)];
+    legend_text = ['scale=', num2str(scale)];
     
     main    
 end

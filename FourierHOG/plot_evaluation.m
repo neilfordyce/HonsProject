@@ -6,9 +6,10 @@ function [] = plot_evaluation( data )
 figure
 hold on
 plot(data.dist.neg_cen, data.dist.neg_hist, 'r')
-plot(data.dist.amb_cen, data.dist.amb_hist, 'b')
+%plot(data.dist.amb_cen, data.dist.amb_hist, 'b')
 plot(data.dist.pos_cen, data.dist.pos_hist, 'g')
-legend('neg','ambiguous','pos')
+%legend('neg','ambiguous','pos')
+legend('neg','pos')
 xlabel('SVM Score')
 ylabel('Normalised Frequency')
 end

@@ -73,10 +73,6 @@ for s = 1:nScale
             ff = -(order(j))+freq;
             if(ff >= -maxFreqSum && ff <= maxFreqSum && ~(order(j)==0 && freq < 0))
                 cnt = cnt + 1;
-                %field = unPad(conv2(f_g(:,:,j), template, 'valid'), [om,on]);
-                %fHoG = cat(3, fHoG, field);
-                %Could scale fHoG, center_f_g, local_mag_g, om, on, here to 
-                %sub sample the features
                 fHoG(:,:,cnt) = unPad(conv2(f_g(:,:,j), template, 'valid'), [om,on]);
             end
         end
@@ -123,6 +119,7 @@ mFdetail = [featureDetail(~iF_index,:) ; c_featureDetail; [0, -1, -1,-1,-1]];
 % here we couple radius 1/2 and radius 2/3
 cF = cell(1,2);
 cFdetail = cell(2,1);
+
 for i = 1:2
     j = i+1;
     cF{i} = fHoG(:, (i-1) * featureDim + (1:featureDim) ) .* conj( fHoG(:, (j-1) * featureDim + (1:featureDim) )  );
@@ -130,6 +127,7 @@ for i = 1:2
     cFdetail{i} = featureDetail((i-1) * featureDim + (1:featureDim),:);
     cFdetail{i}(:,2) = featureDetail((j-1) * featureDim + (1:featureDim),1);
 end
+
 cF = cell2mat(cF);
 cFdetail = cell2mat(cFdetail);
 % for complex number

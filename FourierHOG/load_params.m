@@ -1,7 +1,7 @@
 % Training Parameters
 param.featureScale = 6;
 
-param.sample_count = 15;%35;	%Number of images to use
+param.sample_count = 35;	%Number of images to use
 
 param.neg_sample_count = 300;  %Per image
 
