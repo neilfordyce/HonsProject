@@ -7,7 +7,6 @@ end
 
 %[cost, dif]=data_cost_hist(im);
     [cost, dif]=data_cost(svm_im);
-    %[cost, dif]=data_cost_kmeans(im);
 
     % smoothness costs
     % static part
@@ -16,28 +15,11 @@ end
     smoothing_cost = single(smoothing_cost);
     % spatialy varying part
     [h_cost v_cost] = gradient_orientation(im2double(em_im), seg_param.gradient_smoothing_sigma, seg_param.diff_kernel);
-
-%    sparseSc = sparseSmooth(em_im);
-    
-%    cost1 = cost(:, :, 1);
-%    cost2 = cost(:, :, 2);
-%    cost = [cost1(:) cost2(:)]';
     
     %Approx energy minimisation
-    %GraphCut('open', DataCost, SmoothnessCost, vC, hC);
-    %gch = GraphCut('open', cost, 30*Sc, exp(-Vc*5), exp(-Hc*5));
-    %gch = GraphCut('open', cost*100, 150*Sc, tanh(Vc*0.5), tanh(Hc*0.5)); %data_cost(im)
     gch = GraphCut('open', cost, seg_param.lambda*smoothing_cost, exp(v_cost*250), exp(h_cost*250)); %data_cost(im)
-    %gch = GraphCut('open', cost, 2*Sc, exp(-Vc*50), exp(-Hc*50)); %data_cost_hist(im)
-    %gch = GraphCut('open', cost, 50*Sc, exp(-Vc*5), exp(-Hc*5)); %data_cost_kmeans(im)
-    %gch = GraphCut('open', cost, 150*Sc);
     [gch L] = GraphCut('expand',gch, 5);
     gch = GraphCut('close', gch);
-	
-	%cost1 = cost(:,:,1);
-	%cost2 = cost(:,:,2);
-	%HcVc = Hc+Vc;
-	%L = GCMEX(zeros(size(im(:))), [cost1(:);cost2(:)], PAIRWISE, Sc,1);
 
     L = prune_labels(L);
     
@@ -117,30 +99,6 @@ function [cost, dif] = data_cost_hist(I)
 
     cost(:,:,1) = (dif.*2).^2;
     cost(:,:,2) = 1-cost(:,:,1); 
-end
-
-function [cost, dif] = data_cost_kmeans(I)
-   k = 2; %number of regions
-
-    %Apply kmeans to cluster the image into k regions
-    data = im;
-    %data = data(:);
-    cluster_label = kmeans(data(:), k);
-
-    % calculate the data cost per cluster center
-    for cluster_i=1:k
-        cluster_data = data(:);
-        cluster_data = cluster_data(cluster_label==cluster_i);  %get the data assigned the cluster
-        icv = inv(var(cluster_data));                   %intra-cluster variance 
-
-        dif = data - mean(cluster_data);                %subtract cluster mean 
-
-        % data cost is minus log likelihood of the pixel to belong to each
-        % cluster according to its intensity value
-        cost(:,:,cluster_i) = (dif*icv).*dif./2;
-    end
-    %}
-    %data = im; 
 end
 
 function LL = show_labels(L)
