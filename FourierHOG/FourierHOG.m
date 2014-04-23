@@ -51,6 +51,9 @@ for s = 1:nScale
     for freq = -maxFreq:maxFreq
         for j = 1:numel(order)
             ff = -(order(j))+freq;
+            if (freq==-2 && order(j)==0)
+                now;
+            end
             if(ff >= -maxFreqSum && ff <= maxFreqSum && ~(order(j)==0 && freq < 0))
                 featureDim = featureDim + 1;
                 featureDetail = [featureDetail; [s,-1,-order(j), freq, ff]];

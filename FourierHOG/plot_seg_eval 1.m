@@ -9,7 +9,7 @@ mean_ji=[];
 false_seg=[];
 missed_seg=[];
 x_labels = {};
-indie_variable = 'Lambda';
+indie_variable = 'Detection Feature Scale';
 
 for i=1:numel(dirs)-2 %first two are . and .. so skip 'em
     data_path = fullfile(data_dir, dirs(i+2).name, 'performance.mat');
@@ -17,13 +17,11 @@ for i=1:numel(dirs)-2 %first two are . and .. so skip 'em
     mean_ji = [mean_ji, performance.mean_ji];
     false_seg = [false_seg, performance.false_seg];
     missed_seg = [missed_seg, performance.missed_seg];
-    x_labels{i} = performance.x_label;
+    x_labels{i} = str2num(performance.x_label);
 end
-
+%x_labels{1} = 'None';
 x_labels = cell2mat(x_labels);
-
-set(0,'defaultlinelinewidth',2)
-set(0,'DefaultAxesFontSize', 18)
+set(0,'DefaultAxesFontSize', 16)
 space = 5;
 
 %Figure out how many plots along x we need to make
@@ -38,16 +36,13 @@ orange = [256,100,0]./256;
 figure
 [haxes,hbar1,hbar2]=plotyy(x_labels,mean_ji,[x_labels;x_labels]',[false_seg;missed_seg]');
 
-%set(haxes(1), 'xtickLabel', x_labels);
-%set(haxes(2), 'xtickLabel', '' );
+set(haxes(1), 'xtickLabel', x_labels);
+set(haxes(2), 'xtickLabel', '' );
 
 %Colour the axes
 set(haxes,{'ycolor'},{orange;[67,186,52]./256});
-set(hbar1, 'color', orange); 
-%colormap(haxes(1),[winter(2)])
-colors = winter(2);
-set(hbar2(1), 'color', colors(1, :)); 
-set(hbar2(2), 'color', colors(2, :)); 
+%set(hbar1, 'facecolor', orange); 
+colormap(haxes(1),[winter(2)])
 
 %Labels and legend
 axes(haxes(1)); xlabel(indie_variable); ylabel('Mean Jaccard Index J>0');
@@ -56,3 +51,4 @@ axes(haxes(2)); ylabel('Count of False/Missed Segmentations');
 
 end
 
+;

@@ -1,3 +1,5 @@
+%%Modified from original 
+%%Modifier: Neil Fordyce
 function [ins] = load_data(data_dir, gt_mask_dir, image_indices)
 
 % Directories

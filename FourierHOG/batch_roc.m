@@ -4,8 +4,10 @@ function batch_roc( data_dir, figure_name)
 %   Detailed explanation goes here
 dirs = dir(data_dir);
 
-linespec = {'-k', '-b', '-g', '-r.', '-b*', '-*r'};
+linespec = {'-r', '-b', '-g', '-k.', '-b*', '-*r', '^g-', '-k^'};
 
+set(0,'DefaultAxesFontSize', 16)
+set(0,'defaultlinelinewidth',1)
 figure;
 hold on
 legend_cell = {};
@@ -17,6 +19,9 @@ for i=1:numel(dirs)-2 %first two are . and .. so skip 'em
    
    legend_cell{i} = data.legend_text;
 end
+
+%legend_cell{1} = 'with coupling';
+%legend_cell{2} = 'without coupling';
 
 legend(legend_cell, 'Location', 'SouthEast');
 figure_name = ['C:\Users\Neil\SkyDrive\University\HonoursProject\Reports\', figure_name, '.eps'];

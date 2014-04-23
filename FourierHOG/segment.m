@@ -239,7 +239,7 @@ end
 function [hC vC] = gradient_orientation(I, sigma, diff_kernel)
 %TODO 
 %This can probably be replaced with imgradient function for matlab ver >=2012b
-dy = conv2(fspecial('gauss', [5 5], sigma), diff_kernel, 'valid');
+dy = conv2(fspecial('gauss', [5 5], sigma), diff_kernel, 'valid');  %combine the sobel and gauss kernels
 dx = dy';
 
 %abs because direction doesn't matter, just want the cost of crossing boundaries 

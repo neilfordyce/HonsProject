@@ -8,7 +8,7 @@ clearvars
 close all
 dbstop if error
 
-for scale=[14, 16]
+for scale=[30]
     batch_run = 1;
     
     output_dir = 'variable_scale';

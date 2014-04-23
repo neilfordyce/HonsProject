@@ -1,3 +1,6 @@
+%%Modified version of original from http://lmb.informatik.uni-freiburg.de/resources/opensource/FourierHOG/
+%%Modifier: Neil Fordyce
+
 %%TODO Clean up here
 %% Try the code on a computing server.
 % It will compue and store the feautres pixel-wisely for 30 792 * 636 pixel
@@ -117,7 +120,7 @@ for ifold = 1:5
             continue;
         end
         F = read_feature(feature_dir, i);
-        
+        %Scaling
         for j=1 : size(F, 2)
             F(:,j) = step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,1]), F(:,j));
         end
