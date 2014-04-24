@@ -5,10 +5,11 @@ if not(exist('seg_param','var'))
     load_seg_params     %seg params
 end
 
+    %% Calculate data cost
 %[cost, dif]=data_cost_hist(im);
     [cost, dif]=data_cost(svm_im);
 
-    % smoothness costs
+    %% smoothness costs
     % static part
     smoothing_cost = [0 1;
                       1 0];
@@ -16,11 +17,12 @@ end
     % spatialy varying part
     [h_cost v_cost] = gradient_orientation(im2double(em_im), seg_param.gradient_smoothing_sigma, seg_param.diff_kernel);
     
-    %Approx energy minimisation
+    %% Approx energy minimisation
     gch = GraphCut('open', cost, seg_param.lambda*smoothing_cost, exp(v_cost*250), exp(h_cost*250)); %data_cost(im)
     [gch L] = GraphCut('expand',gch, 5);
     gch = GraphCut('close', gch);
 
+    %% Post processing
     L = prune_labels(L);
     
     L=guard(L);
@@ -150,50 +152,5 @@ hC = -abs(imfilter(I, dx, 'symmetric'));
 
 %vC = -step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,max(abs(vC(:)))]), vC);
 %hC = -step(vision.ContrastAdjuster('OutputRangeSource', 'Property', 'OutputRange', [0,max(abs(hC(:)))]), hC);
-end
-
-function [SparseSmoothness] = sparseSmooth(I)
-    
-    I=im2double(I);
-    [h,w] = size(I);
-    I = I(:);
-    variance = var(I);
-
-    i = zeros(size(I));
-    j = zeros(size(I));
-    s = zeros(size(I));
-    
-    for k=1:numel(I)
-        try
-            i(k)=k;
-            j(k)=k-1;
-            s(k)=(abs(I(k)-I(k-1)).^2)./variance;
-        catch
-        end
-        try
-            i(k)=k;
-            j(k)=k+1;
-            s(k)=(abs(I(k)-I(k+1)).^2)./variance;
-        catch
-        end
-        
-        try
-            i(k)=k;
-            j(k)=k-w;
-            s(k)=(abs(I(k)-I(k-w)).^2)./variance;
-        catch
-        end
-        try
-            i(k)=k;
-            j(k)=k+w;
-            s(k)=(abs(I(k)-I(k+1)).^2)./variance;
-        catch
-        end
-
-    end
-    k
-    SparseSmoothness = sparse(i,j,exp(-s*250));  
-    SparseSmoothness=SparseSmoothness(:,1:numel(I));
-    %SparseSmoothness = sparse(SparseSmoothness);    
 end
 
