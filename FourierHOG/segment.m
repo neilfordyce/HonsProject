@@ -18,7 +18,7 @@ end
     [h_cost v_cost] = gradient_orientation(im2double(em_im), seg_param.gradient_smoothing_sigma, seg_param.diff_kernel);
     
     %% Approx energy minimisation
-    gch = GraphCut('open', cost, seg_param.lambda*smoothing_cost, exp(v_cost*250), exp(h_cost*250)); %data_cost(im)
+    gch = GraphCut('open', cost, seg_param.lambda*smoothing_cost, exp(v_cost*175), exp(h_cost*175)); %data_cost(im)
     [gch L] = GraphCut('expand',gch, 5);
     gch = GraphCut('close', gch);
 

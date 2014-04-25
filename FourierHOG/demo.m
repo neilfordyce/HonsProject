@@ -27,7 +27,7 @@ imshow(Y_hat, []);
 
 %% Segmentation
 tic
-    [seg_im, labelling] = segmenter(Y_hat, I);
+    [seg_im, labelling] = segment(Y_hat, I);
 toc
 
 subplot(1,3,3);

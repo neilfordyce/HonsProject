@@ -48,7 +48,7 @@ for file_i = 1:file_count
     gt = read_mask( fullfile(gt_dir, filename), param.scale);
     gt=guard(gt);
     
-    [em_im, L] = segmenter(im, em_im, seg_param);
+    [em_im, L] = segment(im, em_im, seg_param);
     
     %% Do evaluation
     [acc, ~, missed_seg, false_seg] = evaluate_segment(gt, L);
