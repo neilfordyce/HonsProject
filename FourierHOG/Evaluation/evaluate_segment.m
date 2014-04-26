@@ -1,3 +1,4 @@
+%%Neil Fordyce
 function [ accuracy, F1, missed_seg, false_seg ] = evaluate_segment( gt, seg )
 %Evaluates the quality of a segmentation
 

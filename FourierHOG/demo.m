@@ -1,3 +1,4 @@
+%%Author: Neil Fordyce
 %% Load params and SVM model
 load_params
 load('model.mat', 'model');
