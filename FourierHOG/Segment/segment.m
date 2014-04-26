@@ -49,7 +49,7 @@ function [L] = prune_labels(L)
     
     %Threshold the areas
     TotalImageArea = CC.ImageSize(1) * CC.ImageSize(2);
-    AreaThresh = TotalImageArea * 0.01;  % Threshold anything below 0.6% of the total image size
+    AreaThresh = TotalImageArea * 0.01;  % Threshold anything below 1% of the total image size
     PixelIdxList = CC.PixelIdxList;
     PixelIdxList = PixelIdxList(Area > AreaThresh);
     
